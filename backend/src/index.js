@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const rateLimit = require('express-rate-limit');
 const pool = require('./db');
 
 const companyRoutes = require('./routes/company');
@@ -15,8 +16,18 @@ const { errorHandler } = require('./middleware/errorHandler');
 const app = express();
 const PORT = process.env.PORT || 4000;
 
+// Global rate limiter: max 200 requests per minute per IP
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later.' },
+});
+
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
+app.use('/api', apiLimiter);
 
 // Serve uploaded logo files
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
