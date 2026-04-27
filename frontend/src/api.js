@@ -29,6 +29,7 @@ export const invoices = {
   updateStatus: (id, status) => api.patch(`/invoices/${id}/status`, { status }),
   delete: (id) => api.delete(`/invoices/${id}`),
   pdfUrl: (id) => `/api/invoices/${id}/pdf`,
+  pdfFromHtml: (id, html) => api.post(`/invoices/${id}/pdf-from-html`, { html }, { responseType: 'arraybuffer' }),
   send: (id) => api.post(`/invoices/${id}/send`),
 };
 
@@ -47,4 +48,12 @@ export const bankAccount = {
   testWise: () => api.post('/bank-accounts/wise/test'),
   getSavedTransactions: (params) => api.get('/bank-accounts/wise/transactions/saved', { params }),
   getTransactions: (params) => api.get('/bank-accounts/wise/transactions', { params }),
+};
+
+export const textBlocks = {
+  list: () => api.get('/text-blocks'),
+  create: (data) => api.post('/text-blocks', data),
+  update: (id, data) => api.put(`/text-blocks/${id}`, data),
+  setDefault: (id) => api.patch(`/text-blocks/${id}/default`),
+  delete: (id) => api.delete(`/text-blocks/${id}`),
 };

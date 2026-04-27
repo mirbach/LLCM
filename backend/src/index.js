@@ -9,13 +9,14 @@ const customersRoutes = require('./routes/customers');
 const invoicesRoutes = require('./routes/invoices');
 const backupRoutes = require('./routes/backup');
 const bankAccountRoutes = require('./routes/bankAccount');
+const textBlocksRoutes = require('./routes/textBlocks');
 const { errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 // Serve uploaded logo files
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
@@ -25,6 +26,7 @@ app.use('/api/customers', customersRoutes);
 app.use('/api/invoices', invoicesRoutes);
 app.use('/api/backup', backupRoutes);
 app.use('/api/bank-accounts', bankAccountRoutes);
+app.use('/api/text-blocks', textBlocksRoutes);
 
 // Global error handler (must be last)
 app.use(errorHandler);
@@ -108,6 +110,43 @@ async function runMigrations() {
       matched_invoice_number  VARCHAR(50),
       fetched_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS text_blocks (
+      id         SERIAL PRIMARY KEY,
+      title      VARCHAR(255) NOT NULL DEFAULT '',
+      content    TEXT         NOT NULL DEFAULT '',
+      content_de TEXT         NOT NULL DEFAULT '',
+      created_at TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    )
+  `);
+  // Add content_de to existing text_blocks tables (idempotent)
+  await pool.query(`
+    ALTER TABLE text_blocks ADD COLUMN IF NOT EXISTS content_de TEXT NOT NULL DEFAULT ''
+  `);
+  await pool.query(`
+    ALTER TABLE text_blocks ADD COLUMN IF NOT EXISTS is_default BOOLEAN NOT NULL DEFAULT false
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS invoice_text_blocks (
+      id             SERIAL PRIMARY KEY,
+      invoice_id     INTEGER NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
+      text_block_id  INTEGER NOT NULL REFERENCES text_blocks(id) ON DELETE CASCADE,
+      sort_order     INTEGER NOT NULL DEFAULT 0,
+      UNIQUE (invoice_id, text_block_id)
+    )
+  `);
+
+  await pool.query(`
+    ALTER TABLE customers
+    ADD COLUMN IF NOT EXISTS contact_person VARCHAR(255) NOT NULL DEFAULT ''
+  `);
+
+  await pool.query(`
+    ALTER TABLE customers
+    ADD COLUMN IF NOT EXISTS title VARCHAR(20) NOT NULL DEFAULT ''
   `);
 }
 

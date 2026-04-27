@@ -6,6 +6,7 @@ import { customers as customersApi } from '../api.js';
 
 const EMPTY_FORM = {
   name: '', email: '', phone: '',
+  title: '', contact_person: '',
   address: '', city: '', state: '', zip: '', country: '',
   notes: '', currency: 'USD',
 };
@@ -48,6 +49,23 @@ function CustomerForm({ defaultValues, onSubmit, onClose }) {
       <Field label="Name *" error={errors.name?.message}>
         <input className={inputCls} {...register('name', { required: 'Name is required' })} />
       </Field>
+      <div className="grid grid-cols-3 gap-4">
+        <Field label="Title">
+          <select className={inputCls} {...register('title')}>
+            <option value="">—</option>
+            <option value="Mr">Mr.</option>
+            <option value="Mrs">Mrs.</option>
+            <option value="Ms">Ms.</option>
+            <option value="Dr">Dr.</option>
+            <option value="Prof">Prof.</option>
+          </select>
+        </Field>
+        <div className="col-span-2">
+          <Field label="Contact Person">
+            <input className={inputCls} placeholder="First and last name" {...register('contact_person')} />
+          </Field>
+        </div>
+      </div>
       <div className="grid grid-cols-2 gap-4">
         <Field label="Email" error={errors.email?.message}>
           <input type="email" className={inputCls} {...register('email')} />

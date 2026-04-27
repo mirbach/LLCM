@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import toast from 'react-hot-toast';
-import { invoices as invoicesApi, customers as customersApi, company as companyApi, bankAccount as bankAccountApi } from '../api.js';
+import { invoices as invoicesApi, customers as customersApi, company as companyApi, bankAccount as bankAccountApi, textBlocks as textBlocksApi } from '../api.js';
 import InvoicePreview from '../components/InvoicePreview.jsx';
-import { ArrowLeft, Download, Mail, X, Plus } from 'lucide-react';
+import { ArrowLeft, Download, Mail, X, Plus, FileText, Trash2, ChevronDown, ChevronUp, Star, CheckCircle2, Loader2 } from 'lucide-react';
 
 const inputCls  = 'w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] bg-white dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-500';
 const labelCls  = 'block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1';
@@ -30,6 +30,7 @@ const DEFAULT_FORM = {
   tax_rate: 0,
   currency: 'USD',
   items: [{ ...EMPTY_ITEM }],
+  text_block_ids: [],
 };
 
 const STATUS_OPTIONS = ['draft', 'sent', 'paid', 'overdue'];
@@ -44,7 +45,16 @@ export default function InvoiceEditor() {
   const [bankAccounts, setBankAccounts] = useState([]);
   const [saving, setSaving]             = useState(false);
   const [sending, setSending]           = useState(false);
+  const [downloading, setDownloading]   = useState(false);
   const [invoiceNumber, setInvoiceNumber] = useState('');
+  const [textBlocks, setTextBlocks]     = useState([]);
+  const [tbOpen, setTbOpen]             = useState(false);
+  const [newTb, setNewTb]               = useState({ title: '', content: '', content_de: '' });
+  const [savingTb, setSavingTb]         = useState(false);
+  const [autoSaveStatus, setAutoSaveStatus] = useState('idle'); // 'idle' | 'saving' | 'saved'
+  const previewRef = useRef(null);
+  const autoSaveTimerRef = useRef(null);
+  const isReadyRef = useRef(false); // true after initial invoice load, prevents save on mount
 
   const { register, control, handleSubmit, reset, setValue, formState: { errors } } = useForm({
     defaultValues: DEFAULT_FORM,
@@ -60,13 +70,19 @@ export default function InvoiceEditor() {
     (c) => String(c.id) === String(watchedValues.customer_id),
   ) || null;
 
-  // Load customers + company + bank accounts on mount
+  // Load customers + company + bank accounts + text blocks on mount
   useEffect(() => {
-    Promise.all([customersApi.list(), companyApi.get(), bankAccountApi.list()])
-      .then(([cr, co, ba]) => {
+    Promise.all([customersApi.list(), companyApi.get(), bankAccountApi.list(), textBlocksApi.list()])
+      .then(([cr, co, ba, tb]) => {
         setCustomerList(cr.data);
         setCompany(co.data);
-        setBankAccounts(ba.data.filter((b) => b.show_on_invoice)); // full list, filtered reactively by currency
+        setBankAccounts(ba.data.filter((b) => b.show_on_invoice));
+        setTextBlocks(tb.data);
+        // Pre-check default blocks for new invoices
+        if (isNew) {
+          const defaults = tb.data.filter((t) => t.is_default).map((t) => t.id);
+          if (defaults.length) setValue('text_block_ids', defaults);
+        }
       })
       .catch(() => toast.error('Failed to load data'));
   }, []);
@@ -78,16 +94,19 @@ export default function InvoiceEditor() {
         const inv = r.data;
         setInvoiceNumber(inv.invoice_number);
         reset({
-          customer_id:  String(inv.customer_id ?? ''),
-          status:       inv.status,
-          issue_date:   inv.issue_date?.slice(0, 10) ?? today(),
-          due_date:     inv.due_date?.slice(0, 10) ?? daysFromNow(30),
-          notes:        inv.notes ?? '',
-          footer_text:  inv.footer_text ?? '',
-          tax_rate:     inv.tax_rate ?? 0,
-          currency:     inv.currency ?? 'USD',
-          items:        inv.items?.length ? inv.items : [{ ...EMPTY_ITEM }],
+          customer_id:     String(inv.customer_id ?? ''),
+          status:          inv.status,
+          issue_date:      inv.issue_date?.slice(0, 10) ?? today(),
+          due_date:        inv.due_date?.slice(0, 10) ?? daysFromNow(30),
+          notes:           inv.notes ?? '',
+          footer_text:     inv.footer_text ?? '',
+          tax_rate:        inv.tax_rate ?? 0,
+          currency:        inv.currency ?? 'USD',
+          items:           inv.items?.length ? inv.items : [{ ...EMPTY_ITEM }],
+          text_block_ids:  inv.text_block_ids ?? [],
         });
+        // Allow auto-save after a tick so the reset doesn't trigger it
+        setTimeout(() => { isReadyRef.current = true; }, 200);
       }).catch(() => toast.error('Failed to load invoice'));
     }
   }, [id, isNew, reset]);
@@ -100,6 +119,78 @@ export default function InvoiceEditor() {
     if (cust?.currency) setValue('currency', cust.currency);
   }, [watchedCustomerId, customerList, setValue]);
 
+  // Auto-save: debounce 1.5s after any form change (existing invoices only)
+  useEffect(() => {
+    if (isNew || !isReadyRef.current) return;
+    clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(() => {
+      handleSubmit(async (data) => {
+        setAutoSaveStatus('saving');
+        try {
+          const payload = {
+            ...data,
+            customer_id: data.customer_id || null,
+            tax_rate: Number(data.tax_rate),
+            text_block_ids: data.text_block_ids || [],
+            items: data.items.map((item) => ({
+              description: item.description,
+              quantity:    Number(item.quantity),
+              unit_price:  Number(item.unit_price),
+            })),
+          };
+          const result = await invoicesApi.update(id, payload);
+          setInvoiceNumber(result.data.invoice_number);
+          setAutoSaveStatus('saved');
+          // Reset to idle after 3s
+          setTimeout(() => setAutoSaveStatus('idle'), 3000);
+        } catch {
+          setAutoSaveStatus('idle');
+        }
+      })();
+    }, 1500);
+    return () => clearTimeout(autoSaveTimerRef.current);
+  }, [watchedValues, isNew, id]);
+
+  function handleToggleTb(id) {
+    const current = watchedValues.text_block_ids || [];
+    const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id];
+    setValue('text_block_ids', next);
+  }
+
+  async function handleToggleDefault(id) {
+    try {
+      const res = await textBlocksApi.setDefault(id);
+      setTextBlocks((prev) => prev.map((t) => t.id === id ? res.data : t));
+    } catch {
+      toast.error('Failed to update default');
+    }
+  }
+
+  async function handleSaveTb() {
+    if (!newTb.title.trim() || !newTb.content.trim()) return toast.error('Title and English content required');
+    setSavingTb(true);
+    try {
+      const res = await textBlocksApi.create(newTb);
+      setTextBlocks((prev) => [...prev, res.data].sort((a, b) => a.title.localeCompare(b.title)));
+      setNewTb({ title: '', content: '', content_de: '' });
+      toast.success('Text block saved');
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to save text block');
+    } finally {
+      setSavingTb(false);
+    }
+  }
+
+  async function handleDeleteTb(id) {
+    try {
+      await textBlocksApi.delete(id);
+      setTextBlocks((prev) => prev.filter((t) => t.id !== id));
+      toast.success('Text block deleted');
+    } catch {
+      toast.error('Failed to delete text block');
+    }
+  }
+
   const onSubmit = useCallback(async (data) => {
     setSaving(true);
     try {
@@ -107,6 +198,7 @@ export default function InvoiceEditor() {
         ...data,
         customer_id: data.customer_id || null,
         tax_rate: Number(data.tax_rate),
+        text_block_ids: data.text_block_ids || [],
         items: data.items.map((item) => ({
           description: item.description,
           quantity:    Number(item.quantity),
@@ -145,12 +237,32 @@ export default function InvoiceEditor() {
     }
   }
 
-  function handleDownloadPdf() {
+  async function handleDownloadPdf() {
     if (isNew) return toast.error('Save the invoice first');
-    window.open(invoicesApi.pdfUrl(id), '_blank');
+    const html = await previewRef.current?.getHtml();
+    if (!html) return toast.error('Preview not ready');
+    setDownloading(true);
+    try {
+      const res = await invoicesApi.pdfFromHtml(id, html);
+      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `invoice-${invoiceNumber || id}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error('Failed to generate PDF');
+    } finally {
+      setDownloading(false);
+    }
   }
 
   // Build preview object from live form values
+  const selectedTextBlocks = (watchedValues.text_block_ids || [])
+    .map((id) => textBlocks.find((t) => t.id === id))
+    .filter(Boolean);
+
   const previewInvoice = {
     ...watchedValues,
     invoice_number: isNew ? `${company.invoice_prefix || 'INV-'}XXXX` : invoiceNumber,
@@ -175,15 +287,27 @@ export default function InvoiceEditor() {
           <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">
             {isNew ? 'New Invoice' : `Invoice ${invoiceNumber}`}
           </h1>
+          {/* Auto-save status */}
+          {!isNew && autoSaveStatus === 'saving' && (
+            <span className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
+              <Loader2 size={12} className="animate-spin" />Saving…
+            </span>
+          )}
+          {!isNew && autoSaveStatus === 'saved' && (
+            <span className="flex items-center gap-1 text-xs text-green-500">
+              <CheckCircle2 size={12} />Saved
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {!isNew && (
             <>
               <button
                 onClick={handleDownloadPdf}
-                className="flex items-center gap-1.5 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700"
+                disabled={downloading}
+                className="flex items-center gap-1.5 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-60"
               >
-                <Download size={14} strokeWidth={1.75} /> PDF
+                <Download size={14} strokeWidth={1.75} /> {downloading ? 'Generating…' : 'PDF'}
               </button>
               <button
                 onClick={handleSend}
@@ -350,15 +474,119 @@ export default function InvoiceEditor() {
               </div>
             </div>
 
-            {/* Notes */}
+            {/* Text Blocks */}
             <div>
-              <label className={labelCls}>Notes <span className="font-normal text-gray-400 normal-case">(shown on invoice)</span></label>
-              <textarea
-                rows={3}
-                placeholder="Payment instructions, thank-you message, etc."
-                className={`${inputCls} resize-none`}
-                {...register('notes')}
-              />
+              <button
+                type="button"
+                onClick={() => setTbOpen((o) => !o)}
+                className="flex items-center gap-2 w-full text-left"
+              >
+                <FileText size={14} strokeWidth={1.75} className="text-[var(--accent)]" />
+                <span className={labelCls + ' mb-0 cursor-pointer'}>
+                  Text Blocks
+                  {(watchedValues.text_block_ids?.length > 0) && (
+                    <span className="ml-2 normal-case font-normal text-[var(--accent)]">({watchedValues.text_block_ids.length} selected)</span>
+                  )}
+                </span>
+                {tbOpen ? <ChevronUp size={14} className="ml-auto text-gray-400" /> : <ChevronDown size={14} className="ml-auto text-gray-400" />}
+              </button>
+
+              {tbOpen && (
+                <div className="mt-3 space-y-3">
+                  {/* Saved text blocks — checkboxes */}
+                  {textBlocks.length > 0 ? (
+                    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700 overflow-hidden">
+                      {textBlocks.map((tb) => {
+                        const isDE = selectedCustomer?.country?.toLowerCase().trim() === 'germany';
+                        const preview = isDE && tb.content_de ? tb.content_de : tb.content;
+                        const checked = (watchedValues.text_block_ids || []).includes(tb.id);
+                        return (
+                          <div
+                            key={tb.id}
+                            className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors ${checked ? 'bg-[var(--accent)]/5 dark:bg-[var(--accent)]/10' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'}`}
+                            onClick={() => handleToggleTb(tb.id)}
+                          >
+                            {/* Checkbox */}
+                            <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${checked ? 'bg-[var(--accent)] border-[var(--accent)]' : 'border-gray-300 dark:border-gray-600'}`}>
+                              {checked && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
+                                {tb.title}
+                                {tb.is_default && <Star size={11} strokeWidth={2} className="text-yellow-500 fill-yellow-400" />}
+                              </div>
+                              <div className="text-xs text-gray-400 dark:text-gray-500 truncate">{preview}</div>
+                            </div>
+                            {/* Default toggle */}
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); handleToggleDefault(tb.id); }}
+                              className={`shrink-0 w-6 h-6 flex items-center justify-center rounded transition-colors ${tb.is_default ? 'text-yellow-500' : 'text-gray-300 dark:text-gray-600 hover:text-yellow-400'}`}
+                              title={tb.is_default ? 'Remove as default' : 'Set as default (auto-checked on new invoices)'}
+                            ><Star size={13} strokeWidth={2} className={tb.is_default ? 'fill-yellow-400' : ''} /></button>
+                            {/* Delete */}
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); handleDeleteTb(tb.id); }}
+                              className="shrink-0 w-6 h-6 flex items-center justify-center rounded text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                              title="Delete"
+                            ><Trash2 size={13} strokeWidth={1.75} /></button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-400 dark:text-gray-500">No saved text blocks yet.</p>
+                  )}
+
+                  {/* New text block form */}
+                  <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 space-y-3">
+                    <p className={labelCls + ' mb-0'}>Save new text block</p>
+                    <div>
+                      <label className={labelCls}>Title</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Payment Instructions"
+                        className={inputCls}
+                        value={newTb.title}
+                        onChange={(e) => setNewTb((p) => ({ ...p, title: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label className={labelCls}>Content (English)</label>
+                      <textarea
+                        rows={3}
+                        placeholder="Text that will appear on the invoice…"
+                        className={`${inputCls} resize-none`}
+                        value={newTb.content}
+                        onChange={(e) => setNewTb((p) => ({ ...p, content: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label className={labelCls}>Content (German) <span className="font-normal normal-case text-gray-400">— used for German customers</span></label>
+                      <textarea
+                        rows={3}
+                        placeholder="Deutschen Text für deutsche Kunden…"
+                        className={`${inputCls} resize-none`}
+                        value={newTb.content_de}
+                        onChange={(e) => setNewTb((p) => ({ ...p, content_de: e.target.value }))}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      disabled={savingTb}
+                      onClick={handleSaveTb}
+                      className="flex items-center gap-1.5 bg-[var(--accent)] text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:opacity-90 disabled:opacity-60"
+                    >
+                      <Plus size={13} strokeWidth={2} />{savingTb ? 'Saving…' : 'Save to library'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Hidden notes + text_block_ids fields */}
+              <input type="hidden" {...register('notes')} />
+              <input type="hidden" {...register('text_block_ids')} />
             </div>
 
             {/* Footer Text */}
@@ -380,10 +608,12 @@ export default function InvoiceEditor() {
           {/* A4 paper ratio: 210×297mm */}
           <div className="rounded-xl overflow-hidden shadow-lg" style={{aspectRatio:'210/297'}}>
             <InvoicePreview
+              ref={previewRef}
               invoice={previewInvoice}
               customer={selectedCustomer}
               company={company}
               bankAccounts={filteredBankAccounts}
+              selectedTextBlocks={selectedTextBlocks}
             />
           </div>
         </div>
