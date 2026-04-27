@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+/* Use class-based dark mode (html.dark) instead of media query */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    --accent: #3b82f6;
+  }
+}

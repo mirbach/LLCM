@@ -1,0 +1,31 @@
+# Environment secrets — never commit
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+frontend/node_modules/
+backend/node_modules/
+
+# Build output
+frontend/dist/
+frontend/.vite/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker volumes (local data)
+postgres_data/
+
+# Uploads (user-generated content, not source)
+backend/uploads/
+
+# Editor
+.vscode/settings.json
+.idea/
