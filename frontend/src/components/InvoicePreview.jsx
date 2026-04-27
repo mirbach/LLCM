@@ -156,7 +156,7 @@ const InvoicePreview = forwardRef(function InvoicePreview({ invoice = {}, custom
         )}
 
         {/* ── Letterhead: company name+address LEFT, logo RIGHT ── */}
-        <div style={{ padding: `${mm(6)}px ${mm(20)}px 0 ${mm(25)}px`, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexShrink: 0 }}>
+        <div style={{ padding: `${mm(12)}px ${mm(20)}px 0 ${mm(25)}px`, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexShrink: 0 }}>
           {/* Left: name + address */}
           <div>
             <div style={{ fontSize: 17, fontWeight: 800, color: '#1e40af', letterSpacing: -0.5, marginBottom: 5 }}>{company.name || 'Your Company'}</div>
@@ -302,7 +302,7 @@ const InvoicePreview = forwardRef(function InvoicePreview({ invoice = {}, custom
 
         {/* ── Payment Details — anchored to page bottom ── */}
         {bankAccounts.length > 0 && (
-          <div style={{ padding: `0 ${mm(20)}px 0 ${mm(25)}px`, flexShrink: 0 }}>
+          <div style={{ padding: `0 ${mm(20)}px ${mm(12)}px ${mm(25)}px`, flexShrink: 0 }}>
           <div style={{ borderTop: '2px solid #1e40af', background: '#f8fafc', padding: `${mm(4)}px 0` }}>
             <div style={{ fontSize: 7.5, textTransform: 'uppercase', letterSpacing: 0.5, color: '#6b7280', fontWeight: 700, marginBottom: mm(2) }}>{t.paymentDetails}</div>
             {bankAccounts.map((b, i) => (
