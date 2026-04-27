@@ -363,10 +363,13 @@ router.post('/', async (req, res) => {
       );
     }
 
-    for (let i = 0; i < (text_block_ids || []).length; i++) {
+    const safeBlockIds = Array.isArray(text_block_ids)
+      ? text_block_ids.slice(0, 100).map(Number).filter(Number.isInteger)
+      : [];
+    for (const [i, blockId] of safeBlockIds.entries()) {
       await client.query(
         'INSERT INTO invoice_text_blocks (invoice_id, text_block_id, sort_order) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING',
-        [invoice.id, text_block_ids[i], i],
+        [invoice.id, blockId, i],
       );
     }
 
@@ -412,10 +415,13 @@ router.put('/:id', async (req, res) => {
     }
 
     await client.query('DELETE FROM invoice_text_blocks WHERE invoice_id=$1', [req.params.id]);
-    for (let i = 0; i < (text_block_ids || []).length; i++) {
+    const safeBlockIds = Array.isArray(text_block_ids)
+      ? text_block_ids.slice(0, 100).map(Number).filter(Number.isInteger)
+      : [];
+    for (const [i, blockId] of safeBlockIds.entries()) {
       await client.query(
         'INSERT INTO invoice_text_blocks (invoice_id, text_block_id, sort_order) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING',
-        [invoice.id, text_block_ids[i], i],
+        [invoice.id, blockId, i],
       );
     }
 
