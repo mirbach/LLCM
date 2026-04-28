@@ -57,3 +57,8 @@ export const textBlocks = {
   setDefault: (id) => api.patch(`/text-blocks/${id}/default`),
   delete: (id) => api.delete(`/text-blocks/${id}`),
 };
+
+export const netIncome = {
+  report: (period) => api.get('/net-income', { params: { period } }),
+  pdfUrl: (period) => `/api/net-income/pdf?period=${encodeURIComponent(period)}`,
+};

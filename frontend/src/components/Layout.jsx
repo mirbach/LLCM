@@ -6,6 +6,7 @@ import {
   Users,
   FileText,
   Landmark,
+  TrendingUp,
   Settings,
   Sun,
   Moon,
@@ -19,6 +20,7 @@ const navItems = [
   { to: '/customers',    label: 'Customers',    Icon: Users },
   { to: '/invoices',     label: 'Invoices',     Icon: FileText },
   { to: '/bank-account', label: 'Bank Account', Icon: Landmark },
+  { to: '/net-income',   label: 'Net Income',   Icon: TrendingUp },
 ];
 
 export default function Layout() {

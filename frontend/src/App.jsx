@@ -7,6 +7,7 @@ import Invoices from './pages/Invoices.jsx';
 import InvoiceEditor from './pages/InvoiceEditor.jsx';
 import Settings from './pages/Settings.jsx';
 import BankAccount from './pages/BankAccount.jsx';
+import NetIncome from './pages/NetIncome.jsx';
 
 export default function App() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
           <Route path="invoices/new" element={<InvoiceEditor />} />
           <Route path="invoices/:id/edit" element={<InvoiceEditor />} />
           <Route path="bank-account" element={<BankAccount />} />
+          <Route path="net-income" element={<NetIncome />} />
           <Route path="settings" element={<Settings />} />
         </Route>
       </Routes>

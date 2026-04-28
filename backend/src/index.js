@@ -11,6 +11,7 @@ const invoicesRoutes = require('./routes/invoices');
 const backupRoutes = require('./routes/backup');
 const bankAccountRoutes = require('./routes/bankAccount');
 const textBlocksRoutes = require('./routes/textBlocks');
+const netIncomeRoutes = require('./routes/netIncome');
 const { errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
@@ -38,6 +39,7 @@ app.use('/api/invoices', invoicesRoutes);
 app.use('/api/backup', backupRoutes);
 app.use('/api/bank-accounts', bankAccountRoutes);
 app.use('/api/text-blocks', textBlocksRoutes);
+app.use('/api/net-income', netIncomeRoutes);
 
 // Global error handler (must be last)
 app.use(errorHandler);
