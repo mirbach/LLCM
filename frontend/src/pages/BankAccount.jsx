@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
-import { Landmark, X, Eye, EyeOff, RefreshCw } from 'lucide-react';
+import { Landmark, X, Eye, EyeOff, RefreshCw, Wallet } from 'lucide-react';
 import { bankAccount as bankAccountApi } from '../api.js';
 
 const CURRENCIES = ['USD','EUR','GBP','CAD','AUD','CHF','JPY','NZD','SEK','NOK','DKK'];
@@ -359,12 +359,6 @@ function WiseConfigSection() {
 
 function TransactionsSection() {
   const [currency, setCurrency] = useState('EUR');
-  const [start, setStart] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 90);
-    return d.toISOString().slice(0, 10);
-  });
-  const [end, setEnd] = useState(() => new Date().toISOString().slice(0, 10));
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -383,14 +377,31 @@ function TransactionsSection() {
   async function handleLoad() {
     setLoading(true);
     try {
-      const r = await bankAccountApi.getTransactions({ currency, start, end });
+      const r = await bankAccountApi.getTransactions({ currency });
       setTransactions(r.data);
       setLoaded(true);
-      if (r.data.length === 0) toast.success('No transactions found for this period');
+      if (r.data.length === 0) toast.success('No transactions found');
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to load transactions');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleToggleWithdrawal(wiseId, current) {
+    const next = !current;
+    // Optimistic update
+    setTransactions((prev) =>
+      prev.map((tx) => tx.id === wiseId ? { ...tx, isOwnersWithdrawal: next } : tx),
+    );
+    try {
+      await bankAccountApi.flagWithdrawal(wiseId, next);
+    } catch (err) {
+      // Revert on failure
+      setTransactions((prev) =>
+        prev.map((tx) => tx.id === wiseId ? { ...tx, isOwnersWithdrawal: current } : tx),
+      );
+      toast.error(err.response?.data?.error || 'Failed to update withdrawal flag');
     }
   }
 
@@ -415,18 +426,6 @@ function TransactionsSection() {
             {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
-        <div>
-          <label className={labelCls}>From</label>
-          <input type="date" value={start} onChange={(e) => setStart(e.target.value)}
-            className="border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] bg-white dark:bg-gray-700 dark:text-gray-100"
-          />
-        </div>
-        <div>
-          <label className={labelCls}>To</label>
-          <input type="date" value={end} onChange={(e) => setEnd(e.target.value)}
-            className="border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] bg-white dark:bg-gray-700 dark:text-gray-100"
-          />
-        </div>
         <button
           onClick={handleLoad}
           disabled={loading}
@@ -446,37 +445,58 @@ function TransactionsSection() {
       ) : transactions.length === 0 ? (
         <div className="py-12 text-center text-gray-400 dark:text-gray-500">No transactions found.</div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700">
+        <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-[11px] uppercase tracking-wide text-gray-400 dark:text-gray-500 border-b border-gray-100 dark:border-gray-700">
-                <th className="text-left px-5 py-3">Date</th>
-                <th className="text-left px-5 py-3">Type</th>
-                <th className="text-right px-5 py-3">Amount</th>
+                <th className="text-left px-5 py-3 whitespace-nowrap">Date</th>
+                <th className="text-left px-5 py-3 whitespace-nowrap">Type</th>
+                <th className="text-right px-5 py-3 whitespace-nowrap">Amount</th>
+                <th className="text-right px-5 py-3 whitespace-nowrap">Fees</th>
+                <th className="text-right px-5 py-3 whitespace-nowrap">Balance</th>
                 <th className="text-left px-5 py-3">Description</th>
-                <th className="text-left px-5 py-3">Sender / Reference</th>
-                <th className="text-left px-5 py-3">Matched Invoice</th>
+                <th className="text-left px-5 py-3">Sender</th>
+                <th className="text-left px-5 py-3 whitespace-nowrap">Reference</th>
+                <th className="text-left px-5 py-3 whitespace-nowrap">Matched Invoice</th>
+                <th className="text-center px-5 py-3 whitespace-nowrap">Withdrawal</th>
               </tr>
             </thead>
             <tbody>
               {transactions.map((tx, i) => {
-                const amount = tx.amount?.value ?? 0;
+                const amount         = tx.amount?.value ?? 0;
                 const amountCurrency = tx.amount?.currency ?? currency;
-                const isCredit = (tx.type || '').toUpperCase() === 'CREDIT';
+                const feesValue      = Number(tx.totalFees?.value ?? 0);
+                const feesCur        = tx.totalFees?.currency || amountCurrency;
+                const runBal         = tx.runningBalance?.value;
+                const runBalCur      = tx.runningBalance?.currency || amountCurrency;
+                const isCredit       = (tx.type || '').toUpperCase() === 'CREDIT';
 
                 return (
                   <tr key={i} className="border-b border-gray-50 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                     <td className="px-5 py-3 text-gray-700 dark:text-gray-300 whitespace-nowrap">{fmtDate(tx.date)}</td>
-                    <td className="px-5 py-3">
+                    <td className="px-5 py-3 whitespace-nowrap">
                       <span className={`inline-block px-2 py-0.5 text-[11px] font-semibold rounded-lg ${isCredit ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}>
-                        {isCredit ? 'CREDIT' : 'DEBIT'}
+                        {tx.detailsType || (isCredit ? 'CREDIT' : 'DEBIT')}
                       </span>
                     </td>
                     <td className="px-5 py-3 text-right font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">
                       {amountCurrency} {Number(amount).toFixed(2)}
                     </td>
-                    <td className="px-5 py-3 text-gray-600 dark:text-gray-400 max-w-[200px] truncate">{tx.description || '—'}</td>
-                    <td className="px-5 py-3 text-gray-500 dark:text-gray-400">{tx.senderName || tx.referenceNumber || '—'}</td>
+                    <td className="px-5 py-3 text-right whitespace-nowrap text-gray-500 dark:text-gray-400">
+                      {feesValue !== 0 ? `${feesCur} ${feesValue.toFixed(2)}` : <span className="text-gray-300 dark:text-gray-600">—</span>}
+                    </td>
+                    <td className="px-5 py-3 text-right whitespace-nowrap text-gray-600 dark:text-gray-300">
+                      {runBal != null ? `${runBalCur} ${Number(runBal).toFixed(2)}` : <span className="text-gray-300 dark:text-gray-600">—</span>}
+                    </td>
+                    <td className="px-5 py-3 text-gray-600 dark:text-gray-400 max-w-[180px] truncate">{tx.description || '—'}</td>
+                    <td className="px-5 py-3 text-gray-500 dark:text-gray-400">
+                      {tx.senderName && <div className="font-medium text-gray-700 dark:text-gray-300">{tx.senderName}</div>}
+                      {tx.senderAccount && <div className="text-xs font-mono text-gray-400 dark:text-gray-500">{tx.senderAccount}</div>}
+                      {!tx.senderName && !tx.senderAccount && <span className="text-gray-300 dark:text-gray-600">—</span>}
+                    </td>
+                    <td className="px-5 py-3 text-gray-500 dark:text-gray-400 text-xs">
+                      {tx.paymentReference || tx.referenceNumber || <span className="text-gray-300 dark:text-gray-600">—</span>}
+                    </td>
                     <td className="px-5 py-3">
                       {tx.matched_invoice ? (
                         <Link
@@ -488,6 +508,19 @@ function TransactionsSection() {
                       ) : (
                         <span className="text-gray-400 dark:text-gray-600 text-xs">—</span>
                       )}
+                    </td>
+                    <td className="px-5 py-3 text-center">
+                      <button
+                        title={tx.isOwnersWithdrawal ? 'Unmark as owner\'s withdrawal' : 'Mark as owner\'s withdrawal'}
+                        onClick={() => handleToggleWithdrawal(tx.id, tx.isOwnersWithdrawal)}
+                        className={`w-7 h-7 flex items-center justify-center rounded-lg mx-auto transition-colors ${
+                          tx.isOwnersWithdrawal
+                            ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 hover:bg-purple-200 dark:hover:bg-purple-800/40'
+                            : 'text-gray-300 dark:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-500 dark:hover:text-gray-400'
+                        }`}
+                      >
+                        <Wallet size={14} strokeWidth={1.75} />
+                      </button>
                     </td>
                   </tr>
                 );

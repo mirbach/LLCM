@@ -172,13 +172,20 @@ router.get('/wise/transactions/saved', async (req, res) => {
       );
     });
     return {
-      id:              tx.wise_id,
-      date:            tx.date,
-      type:            tx.type,
-      amount:          { value: tx.amount_value, currency: tx.amount_currency },
-      description:     tx.description,
-      senderName:      tx.sender_name,
-      referenceNumber: tx.reference_number,
+      id:                    tx.wise_id,
+      date:                  tx.date,
+      type:                  tx.type,
+      amount:                { value: tx.amount_value, currency: tx.amount_currency },
+      totalFees:             { value: tx.total_fees_value, currency: tx.total_fees_currency },
+      runningBalance:        { value: tx.running_balance_value, currency: tx.running_balance_currency },
+      description:           tx.description,
+      detailsType:           tx.details_type,
+      senderName:            tx.sender_name,
+      senderAccount:         tx.sender_account,
+      paymentReference:      tx.payment_reference,
+      referenceNumber:       tx.reference_number,
+      exchangeRate:          tx.exchange_rate,
+      isOwnersWithdrawal:    tx.is_owners_withdrawal,
       matched_invoice: matched
         ? { id: matched.id, invoice_number: matched.invoice_number }
         : null,
@@ -188,10 +195,10 @@ router.get('/wise/transactions/saved', async (req, res) => {
   res.json(enriched);
 });
 
-// GET /api/bank-accounts/wise/transactions?currency=EUR&start=2026-01-01&end=2026-04-30
-// Fetches from Wise, upserts to DB, returns persisted rows
+// GET /api/bank-accounts/wise/transactions?currency=EUR
+// Fetches all available transactions from Wise, upserts to DB, returns persisted rows
 router.get('/wise/transactions', async (req, res) => {
-  const { currency, start, end } = req.query;
+  const { currency } = req.query;
 
   const { rows: [row] } = await pool.query(
     'SELECT wise_api_key, wise_profile_id FROM company_settings LIMIT 1',
@@ -200,8 +207,9 @@ router.get('/wise/transactions', async (req, res) => {
   if (!row?.wise_profile_id) return res.status(400).json({ error: 'Wise Profile ID not configured' });
   if (!currency) return res.status(400).json({ error: 'currency query param is required' });
 
-  const intervalStart = `${start || new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)}T00:00:00.000Z`;
-  const intervalEnd   = `${end || new Date().toISOString().slice(0, 10)}T23:59:59.999Z`;
+  // Always fetch all available history (Wise caps at ~469 days per request; use a wide window)
+  const intervalStart = '2020-01-01T00:00:00.000Z';
+  const intervalEnd   = `${new Date().toISOString().slice(0, 10)}T23:59:59.999Z`;
 
   // Step 1: get balances to find the balanceId for this currency
   const balancesRes = await wiseRequest(
@@ -234,25 +242,45 @@ router.get('/wise/transactions', async (req, res) => {
 
   // Upsert each transaction into wise_transactions
   for (const tx of transactions) {
-    const wiseId    = tx.referenceNumber || String(tx.id);
-    const txDate    = tx.date || tx.createdOn || null;
-    const txType    = tx.type || '';
-    const amtValue  = tx.amount?.value ?? 0;
-    const amtCur    = tx.amount?.currency || currency;
-    const desc      = tx.details?.description || tx.details?.type || '';
-    const sender    = tx.details?.senderName || tx.details?.paymentReference || '';
-    const refNum    = tx.referenceNumber || '';
+    const wiseId       = tx.referenceNumber || String(tx.id);
+    const txDate       = tx.date || tx.createdOn || null;
+    const txType       = tx.type || '';
+    const amtValue     = tx.amount?.value ?? 0;
+    const amtCur       = tx.amount?.currency || currency;
+    const feesValue    = tx.totalFees?.value ?? 0;
+    const feesCur      = tx.totalFees?.currency || '';
+    const runBalValue  = tx.runningBalance?.value ?? null;
+    const runBalCur    = tx.runningBalance?.currency || '';
+    const desc         = tx.details?.description || '';
+    const detailsType  = tx.details?.type || '';
+    const sender       = tx.details?.senderName || '';
+    const senderAcct   = tx.details?.senderAccount || '';
+    const payRef       = tx.details?.paymentReference || '';
+    const refNum       = tx.referenceNumber || '';
+    const exchRate     = tx.exchangeDetails?.rate ?? null;
 
     await pool.query(
       `INSERT INTO wise_transactions
-         (wise_id, date, type, amount_value, amount_currency, description, sender_name, reference_number, fetched_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW())
+         (wise_id, date, type, amount_value, amount_currency,
+          total_fees_value, total_fees_currency,
+          running_balance_value, running_balance_currency,
+          description, details_type, sender_name, sender_account,
+          payment_reference, reference_number, exchange_rate, fetched_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,NOW())
        ON CONFLICT (wise_id) DO UPDATE SET
          date=EXCLUDED.date, type=EXCLUDED.type,
          amount_value=EXCLUDED.amount_value, amount_currency=EXCLUDED.amount_currency,
-         description=EXCLUDED.description, sender_name=EXCLUDED.sender_name,
-         reference_number=EXCLUDED.reference_number, fetched_at=NOW()`,
-      [wiseId, txDate, txType, amtValue, amtCur, desc, sender, refNum],
+         total_fees_value=EXCLUDED.total_fees_value, total_fees_currency=EXCLUDED.total_fees_currency,
+         running_balance_value=EXCLUDED.running_balance_value, running_balance_currency=EXCLUDED.running_balance_currency,
+         description=EXCLUDED.description, details_type=EXCLUDED.details_type,
+         sender_name=EXCLUDED.sender_name, sender_account=EXCLUDED.sender_account,
+         payment_reference=EXCLUDED.payment_reference, reference_number=EXCLUDED.reference_number,
+         exchange_rate=EXCLUDED.exchange_rate, fetched_at=NOW()`,
+      [wiseId, txDate, txType, amtValue, amtCur,
+       feesValue, feesCur,
+       runBalValue, runBalCur,
+       desc, detailsType, sender, senderAcct,
+       payRef, refNum, exchRate],
     );
   }
 
@@ -263,6 +291,13 @@ router.get('/wise/transactions', async (req, res) => {
      WHERE status IN ('sent', 'overdue') AND currency=$1`,
     [currency],
   );
+
+  // Fetch persisted flags for this currency (withdrawal flag may have been set by user)
+  const { rows: flagRows } = await pool.query(
+    `SELECT wise_id, is_owners_withdrawal FROM wise_transactions WHERE amount_currency = $1`,
+    [currency],
+  );
+  const withdrawalMap = Object.fromEntries(flagRows.map((r) => [r.wise_id, r.is_owners_withdrawal]));
 
   // Match each transaction to an invoice by exact amount + due_date ±30 days
   const MATCH_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
@@ -280,13 +315,20 @@ router.get('/wise/transactions', async (req, res) => {
       );
     });
     return {
-      id:              wiseId,
-      date:            tx.date,
-      type:            tx.type,
-      amount:          { value: tx.amount?.value, currency: tx.amount?.currency || currency },
-      description:     tx.details?.description || tx.details?.type || '',
-      senderName:      tx.details?.senderName || tx.details?.paymentReference || '',
-      referenceNumber: tx.referenceNumber || '',
+      id:               wiseId,
+      date:             tx.date,
+      type:             tx.type,
+      amount:           { value: tx.amount?.value, currency: tx.amount?.currency || currency },
+      totalFees:        { value: tx.totalFees?.value ?? 0, currency: tx.totalFees?.currency || '' },
+      runningBalance:   { value: tx.runningBalance?.value ?? null, currency: tx.runningBalance?.currency || '' },
+      description:      tx.details?.description || '',
+      detailsType:      tx.details?.type || '',
+      senderName:       tx.details?.senderName || '',
+      senderAccount:    tx.details?.senderAccount || '',
+      paymentReference: tx.details?.paymentReference || '',
+      referenceNumber:  tx.referenceNumber || '',
+      exchangeRate:          tx.exchangeDetails?.rate ?? null,
+      isOwnersWithdrawal:    withdrawalMap[wiseId] ?? false,
       matched_invoice: matched
         ? { id: matched.id, invoice_number: matched.invoice_number }
         : null,
@@ -294,6 +336,23 @@ router.get('/wise/transactions', async (req, res) => {
   });
 
   res.json(enriched);
+});
+
+// PATCH /api/bank-accounts/wise/transactions/:wiseId/withdrawal
+// Body: { is_owners_withdrawal: true|false }
+router.patch('/wise/transactions/:wiseId/withdrawal', async (req, res, next) => {
+  try {
+    const { wiseId } = req.params;
+    const flag = req.body.is_owners_withdrawal === true;
+    const { rowCount } = await pool.query(
+      `UPDATE wise_transactions SET is_owners_withdrawal = $1 WHERE wise_id = $2`,
+      [flag, wiseId],
+    );
+    if (rowCount === 0) return res.status(404).json({ error: 'Transaction not found' });
+    res.json({ wiseId, is_owners_withdrawal: flag });
+  } catch (err) {
+    next(err);
+  }
 });
 
 module.exports = router;

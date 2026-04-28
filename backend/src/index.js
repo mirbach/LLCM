@@ -161,6 +161,17 @@ async function runMigrations() {
     ALTER TABLE customers
     ADD COLUMN IF NOT EXISTS title VARCHAR(20) NOT NULL DEFAULT ''
   `);
+
+  // Extended Wise transaction fields
+  await pool.query(`ALTER TABLE wise_transactions ADD COLUMN IF NOT EXISTS total_fees_value NUMERIC(14,4) DEFAULT 0`);
+  await pool.query(`ALTER TABLE wise_transactions ADD COLUMN IF NOT EXISTS total_fees_currency VARCHAR(10) DEFAULT ''`);
+  await pool.query(`ALTER TABLE wise_transactions ADD COLUMN IF NOT EXISTS running_balance_value NUMERIC(14,2)`);
+  await pool.query(`ALTER TABLE wise_transactions ADD COLUMN IF NOT EXISTS running_balance_currency VARCHAR(10) DEFAULT ''`);
+  await pool.query(`ALTER TABLE wise_transactions ADD COLUMN IF NOT EXISTS sender_account TEXT DEFAULT ''`);
+  await pool.query(`ALTER TABLE wise_transactions ADD COLUMN IF NOT EXISTS payment_reference TEXT DEFAULT ''`);
+  await pool.query(`ALTER TABLE wise_transactions ADD COLUMN IF NOT EXISTS details_type VARCHAR(100) DEFAULT ''`);
+  await pool.query(`ALTER TABLE wise_transactions ADD COLUMN IF NOT EXISTS exchange_rate NUMERIC(18,8)`);
+  await pool.query(`ALTER TABLE wise_transactions ADD COLUMN IF NOT EXISTS is_owners_withdrawal BOOLEAN NOT NULL DEFAULT FALSE`);
 }
 
 runMigrations()

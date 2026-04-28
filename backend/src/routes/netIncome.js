@@ -17,19 +17,36 @@ function getDateWindow(period) {
     const start = new Date(year, 0, 1);
     return { start: start.toISOString(), end: now.toISOString() };
   }
-  // all_time: start of current year, no upper bound
-  const start = new Date(year, 0, 1);
-  return { start: start.toISOString(), end: null };
+  if (period === 'all_time') {
+    // No bounds — return all transactions ever
+    return { start: null, end: null };
+  }
+  // year_YYYY — e.g. year_2024
+  const match = period.match(/^year_(\d{4})$/);
+  if (match) {
+    const y = parseInt(match[1], 10);
+    const start = new Date(y, 0, 1);
+    const end   = new Date(y + 1, 0, 1); // exclusive: Jan 1 of next year
+    return { start: start.toISOString(), end: end.toISOString() };
+  }
+  // Fallback: current year
+  return { start: new Date(year, 0, 1).toISOString(), end: now.toISOString() };
+}
+
+function buildDateFilter(alias, start, end, extraConditions = '') {
+  const conditions = [];
+  const params = [];
+  if (extraConditions) conditions.push(extraConditions);
+  if (start) { params.push(start); conditions.push(`${alias} >= $${params.length}`); }
+  if (end)   { params.push(end);   conditions.push(`${alias} < $${params.length}`); }
+  return { where: conditions.length ? conditions.join(' AND ') : 'TRUE', params };
 }
 
 async function buildReportData(period) {
   const { start, end } = getDateWindow(period);
 
   // (a) Paid invoices in window
-  const invoiceDateFilter = end
-    ? `status = 'paid' AND issue_date >= $1 AND issue_date <= $2`
-    : `status = 'paid' AND issue_date >= $1`;
-  const invoiceParams = end ? [start, end] : [start];
+  const invFilter = buildDateFilter('issue_date', start, end, `status = 'paid'`);
   const { rows: paidInvoices } = await pool.query(
     `SELECT id,
             invoice_number,
@@ -37,16 +54,13 @@ async function buildReportData(period) {
             currency,
             total
      FROM invoices
-     WHERE ${invoiceDateFilter}
+     WHERE ${invFilter.where}
      ORDER BY issue_date`,
-    invoiceParams,
+    invFilter.params,
   );
 
   // (b) Positive (inflow) bank transactions not already matched to a paid invoice
-  const txnDateFilter = end
-    ? `amount_value > 0 AND matched_invoice_id IS NULL AND date >= $1 AND date <= $2`
-    : `amount_value > 0 AND matched_invoice_id IS NULL AND date >= $1`;
-  const txnParams = end ? [start, end] : [start];
+  const txnFilter = buildDateFilter('date', start, end, 'amount_value > 0 AND matched_invoice_id IS NULL');
   const { rows: txnReceipts } = await pool.query(
     `SELECT wise_id,
             date::date AS date,
@@ -55,16 +69,13 @@ async function buildReportData(period) {
             amount_value,
             amount_currency AS currency
      FROM wise_transactions
-     WHERE ${txnDateFilter}
+     WHERE ${txnFilter.where}
      ORDER BY date`,
-    txnParams,
+    txnFilter.params,
   );
 
-  // (c) Negative (outflow) bank transactions — expenses
-  const expDateFilter = end
-    ? `amount_value < 0 AND date >= $1 AND date <= $2`
-    : `amount_value < 0 AND date >= $1`;
-  const expParams = end ? [start, end] : [start];
+  // (c) Negative (outflow) bank transactions — business expenses (exclude owner withdrawals)
+  const expFilter = buildDateFilter('date', start, end, 'amount_value < 0 AND is_owners_withdrawal = FALSE');
   const { rows: expenses } = await pool.query(
     `SELECT wise_id,
             date::date AS date,
@@ -73,9 +84,24 @@ async function buildReportData(period) {
             amount_value,
             amount_currency AS currency
      FROM wise_transactions
-     WHERE ${expDateFilter}
+     WHERE ${expFilter.where}
      ORDER BY date`,
-    expParams,
+    expFilter.params,
+  );
+
+  // (d) Owner's withdrawals — negative transactions flagged as owner draws
+  const wdFilter = buildDateFilter('date', start, end, 'amount_value < 0 AND is_owners_withdrawal = TRUE');
+  const { rows: ownerWithdrawals } = await pool.query(
+    `SELECT wise_id,
+            date::date AS date,
+            description,
+            sender_name,
+            amount_value,
+            amount_currency AS currency
+     FROM wise_transactions
+     WHERE ${wdFilter.where}
+     ORDER BY date`,
+    wdFilter.params,
   );
 
   // ── Group by currency ──────────────────────────────────────────────────────
@@ -88,8 +114,10 @@ async function buildReportData(period) {
         invoiceReceipts: [],
         txnReceipts: [],
         expenses: [],
+        withdrawals: [],
         receiptsTotal: 0,
         expensesTotal: 0,
+        withdrawalsTotal: 0,
         netIncome: 0,
       };
     }
@@ -132,6 +160,18 @@ async function buildReportData(period) {
     bucket.expensesTotal += Math.abs(Number(exp.amount_value));
   }
 
+  for (const wd of ownerWithdrawals) {
+    const cur = (wd.currency || 'USD').toUpperCase();
+    const bucket = getOrCreate(cur);
+    bucket.withdrawals.push({
+      id: wd.wise_id,
+      label: wd.description || wd.sender_name || '—',
+      date: wd.date,
+      amount: Math.abs(Number(wd.amount_value)),
+    });
+    bucket.withdrawalsTotal += Math.abs(Number(wd.amount_value));
+  }
+
   for (const bucket of Object.values(currencyMap)) {
     bucket.netIncome = bucket.receiptsTotal - bucket.expensesTotal;
   }
@@ -157,7 +197,12 @@ function buildReportHtml(report) {
   const periodLabels = {
     this_month: 'This Month',
     this_year: 'This Year',
-    all_time: 'All Time (Current Year)',
+    all_time: 'All Time',
+  };
+  const getPeriodLabel = (p) => {
+    if (periodLabels[p]) return periodLabels[p];
+    const m = p.match(/^year_(\d{4})$/);
+    return m ? m[1] : p;
   };
 
   const sections = report.currencies
@@ -198,11 +243,31 @@ function buildReportHtml(report) {
         )
         .join('');
 
+      const wdRows = (cur.withdrawals || [])
+        .map(
+          (r) => `
+          <tr>
+            <td>${formatDate(r.date)}</td>
+            <td>${r.label}</td>
+            <td style="color:#7c3aed">Owner's Withdrawal</td>
+            <td style="text-align:right">(${fmt(r.amount, cur.currency)})</td>
+          </tr>`,
+        )
+        .join('');
+
       const netColor = cur.netIncome >= 0 ? '#16a34a' : '#dc2626';
       const netLabel =
         cur.netIncome >= 0
           ? 'Excess of Receipts over Expenses'
           : 'Excess of Expenses over Receipts';
+
+      const withdrawalsSection = wdRows
+        ? `${wdRows}
+              <tr class="subtotal-row">
+                <td colspan="3">Total Owner's Withdrawals</td>
+                <td style="text-align:right;color:#7c3aed">(${fmt(cur.withdrawalsTotal || 0, cur.currency)})</td>
+              </tr>`
+        : '';
 
       return `
         <div class="section">
@@ -232,14 +297,16 @@ function buildReportHtml(report) {
                 <td colspan="3">${netLabel}</td>
                 <td style="text-align:right;color:${netColor}">${fmt(Math.abs(cur.netIncome), cur.currency)}</td>
               </tr>
+              ${withdrawalsSection}
             </tbody>
           </table>
         </div>`;
     })
     .join('');
 
-  const fromLabel = formatDate(report.from);
-  const toLabel = report.to ? formatDate(report.to) : 'Present';
+  const fromLabel = report.from ? formatDate(report.from) : 'All records';
+  const toLabel   = report.to ? formatDate(report.to) : 'Present';
+  const dateRange = report.from ? `${fromLabel} – ${toLabel}` : 'All Time';
 
   return `<!DOCTYPE html>
 <html>
@@ -261,7 +328,7 @@ function buildReportHtml(report) {
 </head>
 <body>
   <h1>Statement of Excess of Receipts over Expenses</h1>
-  <div class="subtitle">Period: ${periodLabels[report.period] || report.period} &nbsp;|&nbsp; ${fromLabel} – ${toLabel}</div>
+  <div class="subtitle">Period: ${getPeriodLabel(report.period)} &nbsp;|&nbsp; ${dateRange}</div>
   ${sections || '<p style="color:#6b7280">No transactions found for this period.</p>'}
 </body>
 </html>`;
@@ -269,12 +336,34 @@ function buildReportHtml(report) {
 
 // ─── Routes ─────────────────────────────────────────────────────────────────
 
-// GET /api/net-income?period=this_month|this_year|all_time
+function isValidPeriod(p) {
+  if (!p) return false;
+  if (['this_month', 'this_year', 'all_time'].includes(p)) return true;
+  return /^year_\d{4}$/.test(p);
+}
+
+// GET /api/net-income/years
+// Returns distinct years that have paid invoices or wise transactions
+router.get('/years', async (req, res, next) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT DISTINCT year FROM (
+        SELECT EXTRACT(YEAR FROM issue_date)::int AS year FROM invoices WHERE status = 'paid'
+        UNION
+        SELECT EXTRACT(YEAR FROM date)::int       AS year FROM wise_transactions WHERE date IS NOT NULL
+      ) y
+      ORDER BY year DESC
+    `);
+    res.json(rows.map((r) => r.year));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/net-income?period=this_month|this_year|all_time|year_YYYY
 router.get('/', async (req, res, next) => {
   try {
-    const period = ['this_month', 'this_year', 'all_time'].includes(req.query.period)
-      ? req.query.period
-      : 'this_year';
+    const period = isValidPeriod(req.query.period) ? req.query.period : 'this_year';
     const data = await buildReportData(period);
     res.json(data);
   } catch (err) {
@@ -282,13 +371,11 @@ router.get('/', async (req, res, next) => {
   }
 });
 
-// GET /api/net-income/pdf?period=this_month|this_year|all_time
+// GET /api/net-income/pdf?period=this_month|this_year|all_time|year_YYYY
 router.get('/pdf', async (req, res, next) => {
   let browser;
   try {
-    const period = ['this_month', 'this_year', 'all_time'].includes(req.query.period)
-      ? req.query.period
-      : 'this_year';
+    const period = isValidPeriod(req.query.period) ? req.query.period : 'this_year';
     const data = await buildReportData(period);
     const html = buildReportHtml(data);
 

@@ -48,6 +48,10 @@ export const bankAccount = {
   testWise: () => api.post('/bank-accounts/wise/test'),
   getSavedTransactions: (params) => api.get('/bank-accounts/wise/transactions/saved', { params }),
   getTransactions: (params) => api.get('/bank-accounts/wise/transactions', { params }),
+  flagWithdrawal: (wiseId, flag) =>
+    api.patch(`/bank-accounts/wise/transactions/${encodeURIComponent(wiseId)}/withdrawal`, {
+      is_owners_withdrawal: flag,
+    }),
 };
 
 export const textBlocks = {
@@ -60,5 +64,6 @@ export const textBlocks = {
 
 export const netIncome = {
   report: (period) => api.get('/net-income', { params: { period } }),
+  years: () => api.get('/net-income/years'),
   pdfUrl: (period) => `/api/net-income/pdf?period=${encodeURIComponent(period)}`,
 };
