@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-invoicepass}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./backend/src/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./backend/src/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro,z
     ports:
       - "5432:5432"
     healthcheck:
@@ -30,8 +30,8 @@ services:
       SMTP_FROM: ${SMTP_FROM:-}
       PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium
     volumes:
-      - ./backend/src:/app/src
-      - ./backend/eslint.config.mjs:/app/eslint.config.mjs
+      - ./backend/src:/app/src:z
+      - ./backend/eslint.config.mjs:/app/eslint.config.mjs:z
       - uploads:/app/uploads
     ports:
       - "4000:4000"
@@ -46,9 +46,9 @@ services:
     environment:
       VITE_API_TARGET: http://backend:4000
     volumes:
-      - ./frontend/src:/app/src
-      - ./frontend/index.html:/app/index.html
-      - ./frontend/eslint.config.js:/app/eslint.config.js
+      - ./frontend/src:/app/src:z
+      - ./frontend/index.html:/app/index.html:z
+      - ./frontend/eslint.config.js:/app/eslint.config.js:z
       - /app/node_modules
     ports:
       - "3000:3000"
