@@ -1,0 +1,41 @@
+[package]
+name = "frontend"
+version.workspace = true
+edition.workspace = true
+autobins = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+shared = { path = "../shared" }
+
+# Leptos CSR
+leptos = { version = "0.7", features = ["csr"] }
+leptos_router = { version = "0.7" }
+
+# Web / WASM
+gloo-net = { version = "0.6", features = ["http"] }
+gloo-storage = "0.3"
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+web-sys = { version = "0.3", features = [
+    "Window", "Document",
+    "HtmlInputElement", "HtmlTextAreaElement", "HtmlSelectElement",
+    "File", "FormData", "FileList", "Blob", "BlobPropertyBag", "Url",
+    "MouseEvent", "Event", "InputEvent", "HtmlElement", "HtmlFormElement",
+] }
+js-sys = "0.3"
+
+# Serde
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# IDs + time
+uuid = { workspace = true }
+chrono = { workspace = true }
+
+# Logging
+console_error_panic_hook = "0.1"
+log = "0.4"
+console_log = "1"

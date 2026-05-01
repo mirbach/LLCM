@@ -1,0 +1,17 @@
+[workspace]
+resolver = "2"
+members = ["shared", "backend", "frontend"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+uuid = { version = "1", features = ["serde", "v4", "js"] }
+chrono = { version = "0.4", features = ["serde", "wasmbind"] }
+thiserror = "1"
+anyhow = "1"
+tracing = "0.1"
+validator = { version = "0.19", features = ["derive"] }

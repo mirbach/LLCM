@@ -1,0 +1,602 @@
+ Image rust-backend Building 
+ Image rust-frontend Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 895B done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile: 1.05kB 0.0s done
+#2 DONE 0.0s
+
+#3 [auth] library/nginx:pull token for registry-1.docker.io
+#3 DONE 0.0s
+
+#4 [auth] library/rust:pull token for registry-1.docker.io
+#4 DONE 0.0s
+
+#5 [internal] load metadata for docker.io/library/nginx:1.27-alpine
+#5 ...
+
+#6 [internal] load metadata for docker.io/library/rust:1.88-slim
+#6 DONE 0.9s
+
+#5 [internal] load metadata for docker.io/library/nginx:1.27-alpine
+#5 DONE 0.9s
+
+#7 [internal] load .dockerignore
+#7 transferring context: 2B done
+#7 DONE 0.0s
+
+#8 [internal] load build context
+#8 transferring context: 20.55kB 0.0s done
+#8 DONE 0.0s
+
+#9 [builder  1/12] FROM docker.io/library/rust:1.88-slim@sha256:38bc5a86d998772d4aec2348656ed21438d20fcdce2795b56ca434cf21430d89
+#9 resolve docker.io/library/rust:1.88-slim@sha256:38bc5a86d998772d4aec2348656ed21438d20fcdce2795b56ca434cf21430d89
+#9 resolve docker.io/library/rust:1.88-slim@sha256:38bc5a86d998772d4aec2348656ed21438d20fcdce2795b56ca434cf21430d89 0.0s done
+#9 DONE 0.0s
+
+#10 [runtime 1/3] FROM docker.io/library/nginx:1.27-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10
+#10 resolve docker.io/library/nginx:1.27-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10 0.0s done
+#10 CACHED
+
+#11 [builder  5/12] WORKDIR /app
+#11 CACHED
+
+#12 [builder  3/12] RUN rustup target add wasm32-unknown-unknown
+#12 CACHED
+
+#13 [builder  4/12] RUN cargo install trunk --locked
+#13 CACHED
+
+#14 [builder  6/12] COPY Cargo.toml ./
+#14 CACHED
+
+#15 [builder  2/12] RUN apt-get update && apt-get install -y --no-install-recommends     curl pkg-config libssl-dev     && rm -rf /var/lib/apt/lists/*
+#15 CACHED
+
+#16 [builder  7/12] COPY shared/ shared/
+#16 CACHED
+
+#17 [builder  8/12] COPY frontend/ frontend/
+#17 DONE 0.1s
+
+#18 [builder  9/12] RUN sed -i 's/, *"backend"//g; s/"backend", *//g' Cargo.toml
+#18 DONE 0.2s
+
+#19 [builder 10/12] WORKDIR /app/frontend
+#19 DONE 0.1s
+
+#20 [builder 11/12] RUN cargo build --target=wasm32-unknown-unknown --release 2>&1 || true
+#20 0.328     Updating crates.io index
+#20 2.842      Locking 224 packages to latest compatible versions
+#20 2.855       Adding gloo-net v0.6.0 (available: v0.7.0)
+#20 2.855       Adding gloo-storage v0.3.0 (available: v0.4.0)
+#20 2.862       Adding leptos v0.7.8 (available: v0.8.19)
+#20 2.865       Adding leptos_router v0.7.8 (available: v0.8.13)
+#20 2.885       Adding thiserror v1.0.69 (available: v2.0.18)
+#20 2.890       Adding validator v0.19.0 (available: v0.20.0)
+#20 2.919  Downloading crates ...
+#20 3.070   Downloaded gloo-storage v0.3.0
+#20 3.074   Downloaded attribute-derive-macro v0.10.5
+#20 3.110   Downloaded proc-macro-error2 v2.0.1
+#20 3.118   Downloaded quote-use-macros v0.8.4
+#20 3.122   Downloaded async-lock v3.4.2
+#20 3.126   Downloaded quote-use v0.8.4
+#20 3.128   Downloaded proc-macro2-diagnostics v0.10.1
+#20 3.131   Downloaded dyn-clone v1.0.20
+#20 3.147   Downloaded collection_literals v1.0.3
+#20 3.150   Downloaded attribute-derive v0.10.5
+#20 3.155   Downloaded camino v1.2.2
+#20 3.160   Downloaded proc-macro2 v1.0.106
+#20 3.166   Downloaded dashmap v6.1.0
+#20 3.170   Downloaded proc-macro-utils v0.10.0
+#20 3.172   Downloaded drain_filter_polyfill v0.1.3
+#20 3.174   Downloaded config v0.15.22
+#20 3.180   Downloaded async-trait v0.1.89
+#20 3.187   Downloaded futures-macro v0.3.32
+#20 3.189   Downloaded darling_macro v0.20.11
+#20 3.191   Downloaded convert_case v0.7.1
+#20 3.193   Downloaded const_format_proc_macros v0.2.34
+#20 3.196   Downloaded autocfg v1.5.0
+#20 3.200   Downloaded any_spawner v0.2.0
+#20 3.202   Downloaded bumpalo v3.20.2
+#20 3.210   Downloaded aho-corasick v1.1.4
+#20 3.223   Downloaded quote v1.0.45
+#20 3.235   Downloaded futures-io v0.3.32
+#20 3.239   Downloaded const_str_slice_concat v0.1.0
+#20 3.241   Downloaded event-listener v5.4.1
+#20 3.246   Downloaded futures-executor v0.3.32
+#20 3.248   Downloaded codee v0.3.5
+#20 3.253   Downloaded leptos_server v0.7.8
+#20 3.257   Downloaded itoa v1.0.18
+#20 3.260   Downloaded console_log v1.0.0
+#20 3.262   Downloaded cfg-if v1.0.4
+#20 3.265   Downloaded getrandom v0.4.2
+#20 3.270   Downloaded either_of v0.1.9
+#20 3.272   Downloaded rustversion v1.0.22
+#20 3.277   Downloaded hydration_context v0.2.1
+#20 3.278   Downloaded gloo-utils v0.2.0
+#20 3.286   Downloaded anyhow v1.0.102
+#20 3.294   Downloaded serde_core v1.0.228
+#20 3.300   Downloaded guardian v1.3.0
+#20 3.303   Downloaded leptos_macro v0.7.9
+#20 3.307   Downloaded futures v0.3.32
+#20 3.316   Downloaded manyhow v0.11.4
+#20 3.328   Downloaded litemap v0.8.2
+#20 3.333   Downloaded proc-macro-error-attr2 v2.0.0
+#20 3.335   Downloaded potential_utf v0.1.5
+#20 3.337   Downloaded leptos_router_macro v0.7.8
+#20 3.339   Downloaded futures-channel v0.3.32
+#20 3.343   Downloaded next_tuple v0.1.0
+#20 3.353   Downloaded parking v2.2.1
+#20 3.375   Downloaded form_urlencoded v1.2.2
+#20 3.377   Downloaded futures-task v0.3.32
+#20 3.383   Downloaded leptos_dom v0.7.8
+#20 3.386   Downloaded idna_adapter v1.2.2
+#20 3.390   Downloaded server_fn v0.7.8
+#20 3.395   Downloaded ident_case v1.0.1
+#20 3.397   Downloaded serde_spanned v1.1.1
+#20 3.399   Downloaded konst_macro_rules v0.2.19
+#20 3.407   Downloaded event-listener-strategy v0.5.4
+#20 3.409   Downloaded send_wrapper v0.6.0
+#20 3.412   Downloaded interpolator v0.5.0
+#20 3.423   Downloaded tinystr v0.8.3
+#20 3.427   Downloaded percent-encoding v2.3.2
+#20 3.429   Downloaded manyhow-macros v0.11.4
+#20 3.430   Downloaded or_poisoned v0.1.0
+#20 3.432   Downloaded oco_ref v0.2.1
+#20 3.435   Downloaded futures-sink v0.3.32
+#20 3.437   Downloaded gloo-net v0.6.0
+#20 3.440   Downloaded futures-core v0.3.32
+#20 3.446   Downloaded leptos_config v0.7.8
+#20 3.454   Downloaded linear-map v1.2.0
+#20 3.457   Downloaded darling v0.20.11
+#20 3.464   Downloaded parking_lot_core v0.9.12
+#20 3.469   Downloaded leptos_hot_reload v0.7.8
+#20 3.472   Downloaded yoke v0.8.2
+#20 3.475   Downloaded xxhash-rust v0.8.15
+#20 3.478   Downloaded pin-project-internal v1.1.11
+#20 3.481   Downloaded pin-project v1.1.11
+#20 3.498   Downloaded reactive_stores v0.1.8
+#20 3.502   Downloaded pin-project-lite v0.2.17
+#20 3.509   Downloaded log v0.4.29
+#20 3.513   Downloaded icu_properties v2.2.0
+#20 3.518   Downloaded derive-where v1.6.1
+#20 3.523   Downloaded js-sys v0.3.97
+#20 3.528   Downloaded server_fn_macro v0.7.8
+#20 3.530   Downloaded server_fn_macro_default v0.7.8
+#20 3.532   Downloaded leptos v0.7.8
+#20 3.537   Downloaded hashbrown v0.17.0
+#20 3.546   Downloaded zerofrom v0.1.7
+#20 3.548   Downloaded serde_derive v1.0.228
+#20 3.554   Downloaded darling_core v0.20.11
+#20 3.561   Downloaded throw_error v0.2.0
+#20 3.562   Downloaded bytes v1.11.1
+#20 3.569   Downloaded synstructure v0.13.2
+#20 3.571   Downloaded futures-util v0.3.32
+#20 3.588   Downloaded indexmap v2.14.0
+#20 3.595   Downloaded konst v0.2.20
+#20 3.601   Downloaded icu_normalizer v2.2.0
+#20 3.607   Downloaded http v1.4.0
+#20 3.614   Downloaded icu_normalizer_data v2.2.0
+#20 3.618   Downloaded icu_collections v2.2.0
+#20 3.629   Downloaded leptos_router v0.7.8
+#20 3.634   Downloaded idna v1.1.0
+#20 3.639   Downloaded itertools v0.14.0
+#20 3.649   Downloaded icu_properties_data v2.2.0
+#20 3.663   Downloaded wasm-bindgen-shared v0.2.120
+#20 3.665   Downloaded slab v0.4.12
+#20 3.668   Downloaded icu_locale_core v2.2.0
+#20 3.679   Downloaded serde_qs v0.13.0
+#20 3.685   Downloaded prettyplease v0.2.37
+#20 3.691   Downloaded zerofrom-derive v0.1.7
+#20 3.693   Downloaded memchr v2.8.0
+#20 3.702   Downloaded uuid v1.23.1
+#20 3.706   Downloaded console_error_panic_hook v0.1.7
+#20 3.717   Downloaded const_format v0.2.36
+#20 3.725   Downloaded stable_deref_trait v1.2.1
+#20 3.727   Downloaded chrono v0.4.44
+#20 3.735   Downloaded once_cell v1.21.4
+#20 3.739   Downloaded lock_api v0.4.14
+#20 3.742   Downloaded parking_lot v0.12.5
+#20 3.746   Downloaded iana-time-zone v0.1.65
+#20 3.751   Downloaded concurrent-queue v2.5.0
+#20 3.754   Downloaded icu_provider v2.2.0
+#20 3.759   Downloaded html-escape v0.2.13
+#20 3.764   Downloaded wasm-bindgen-macro v0.2.120
+#20 3.766   Downloaded smallvec v1.15.1
+#20 3.777   Downloaded thiserror v2.0.18
+#20 3.787   Downloaded zerovec-derive v0.11.3
+#20 3.789   Downloaded toml_parser v1.1.2+spec-1.1.0
+#20 3.793   Downloaded libc v0.2.186
+#20 3.859   Downloaded wasm-bindgen v0.2.120
+#20 3.864   Downloaded unicode-ident v1.0.24
+#20 3.870   Downloaded zmij v1.0.21
+#20 3.874   Downloaded yoke-derive v0.8.2
+#20 3.877   Downloaded rustc-hash v2.1.2
+#20 3.879   Downloaded validator v0.19.0
+#20 3.882   Downloaded wasm-bindgen-futures v0.4.70
+#20 3.883   Downloaded utf8-width v0.1.8
+#20 3.885   Downloaded toml_datetime v1.1.1+spec-1.1.0
+#20 3.886   Downloaded thiserror-impl v2.0.18
+#20 3.889   Downloaded syn_derive v0.2.0
+#20 3.891   Downloaded typed-builder-macro v0.20.1
+#20 3.895   Downloaded writeable v0.6.3
+#20 3.899   Downloaded validator_derive v0.19.0
+#20 3.902   Downloaded unicode-xid v0.2.6
+#20 3.904   Downloaded typed-builder v0.20.1
+#20 3.907   Downloaded slotmap v1.1.1
+#20 3.912   Downloaded rstml v0.12.1
+#20 3.917   Downloaded reactive_stores_macro v0.1.8
+#20 3.919   Downloaded toml v1.1.2+spec-1.1.0
+#20 3.926   Downloaded wasm-streams v0.4.2
+#20 3.961   Downloaded serde_json v1.0.149
+#20 3.984   Downloaded regex-syntax v0.8.10
+#20 3.995   Downloaded zerovec v0.11.6
+#20 4.003   Downloaded zerotrie v0.2.4
+#20 4.009   Downloaded unicode-segmentation v1.13.2
+#20 4.015   Downloaded reactive_graph v0.1.8
+#20 4.025   Downloaded serde v1.0.228
+#20 4.035   Downloaded wasm-bindgen-macro-support v0.2.120
+#20 4.039   Downloaded syn v2.0.117
+#20 4.175   Downloaded regex-automata v0.4.14
+#20 4.197   Downloaded web-sys v0.3.97
+#20 4.310   Downloaded winnow v1.0.2
+#20 4.334   Downloaded url v2.5.8
+#20 4.341   Downloaded yansi v1.0.1
+#20 4.346   Downloaded regex v1.12.3
+#20 4.354   Downloaded tachys v0.1.9
+#20 4.480    Compiling proc-macro2 v1.0.106
+#20 4.480    Compiling quote v1.0.45
+#20 4.480    Compiling unicode-ident v1.0.24
+#20 4.482    Compiling memchr v2.8.0
+#20 4.484    Compiling wasm-bindgen-shared v0.2.120
+#20 4.488    Compiling serde_core v1.0.228
+#20 4.495    Compiling pin-project-lite v0.2.17
+#20 4.496    Compiling rustversion v1.0.22
+#20 4.498    Compiling cfg-if v1.0.4
+#20 4.499    Compiling futures-core v0.3.32
+#20 4.502    Compiling once_cell v1.21.4
+#20 4.504    Compiling bumpalo v3.20.2
+#20 4.508    Compiling futures-sink v0.3.32
+#20 4.508    Compiling futures-task v0.3.32
+#20 4.510    Compiling slab v0.4.12
+#20 4.510    Compiling futures-io v0.3.32
+#20 4.510    Compiling serde v1.0.228
+#20 4.529    Compiling thiserror v2.0.18
+#20 4.554    Compiling version_check v0.9.5
+#20 4.554    Compiling stable_deref_trait v1.2.1
+#20 4.555    Compiling smallvec v1.15.1
+#20 4.560    Compiling parking_lot_core v0.9.12
+#20 4.561    Compiling crossbeam-utils v0.8.21
+#20 4.578    Compiling litemap v0.8.2
+#20 4.612    Compiling unicode-segmentation v1.13.2
+#20 4.664    Compiling zmij v1.0.21
+#20 4.752    Compiling futures-channel v0.3.32
+#20 4.775    Compiling writeable v0.6.3
+#20 4.796    Compiling utf8_iter v1.0.4
+#20 4.914    Compiling itoa v1.0.18
+#20 4.986    Compiling serde_json v1.0.149
+#20 5.032    Compiling icu_normalizer_data v2.2.0
+#20 5.088    Compiling icu_properties_data v2.2.0
+#20 5.143    Compiling thiserror v1.0.69
+#20 5.146    Compiling unicode-xid v0.2.6
+#20 5.191    Compiling scopeguard v1.2.0
+#20 5.221    Compiling libc v0.2.186
+#20 5.271    Compiling throw_error v0.2.0
+#20 5.312    Compiling lock_api v0.4.14
+#20 5.351    Compiling camino v1.2.2
+#20 5.389    Compiling percent-encoding v2.3.2
+#20 5.394    Compiling konst_macro_rules v0.2.19
+#20 5.417    Compiling proc-macro2-diagnostics v0.10.1
+#20 5.427    Compiling slotmap v1.1.1
+#20 5.464    Compiling anyhow v1.0.102
+#20 5.486    Compiling paste v1.0.15
+#20 5.567    Compiling send_wrapper v0.6.0
+#20 5.740    Compiling konst v0.2.20
+#20 5.749    Compiling convert_case v0.7.1
+#20 5.774    Compiling or_poisoned v0.1.0
+#20 5.786    Compiling convert_case v0.6.0
+#20 5.818    Compiling aho-corasick v1.1.4
+#20 5.822    Compiling form_urlencoded v1.2.2
+#20 5.905    Compiling hashbrown v0.17.0
+#20 5.907    Compiling xxhash-rust v0.8.15
+#20 5.907    Compiling rustc-hash v2.1.2
+#20 5.935    Compiling equivalent v1.0.2
+#20 5.997    Compiling either v1.15.0
+#20 5.998    Compiling guardian v1.3.0
+#20 6.061    Compiling regex-syntax v0.8.10
+#20 6.065    Compiling parking_lot v0.12.5
+#20 6.143    Compiling utf8-width v0.1.8
+#20 6.169    Compiling fnv v1.0.7
+#20 6.220    Compiling strsim v0.11.1
+#20 6.252    Compiling winnow v1.0.2
+#20 6.263    Compiling ident_case v1.0.1
+#20 6.323    Compiling getrandom v0.4.2
+#20 6.330    Compiling bytes v1.11.1
+#20 6.467    Compiling itertools v0.14.0
+#20 6.519    Compiling yansi v1.0.1
+#20 6.596    Compiling html-escape v0.2.13
+#20 6.706    Compiling concurrent-queue v2.5.0
+#20 6.765    Compiling wasm-bindgen v0.2.120
+#20 7.191    Compiling autocfg v1.5.0
+#20 7.204    Compiling hashbrown v0.14.5
+#20 7.224    Compiling event-listener v5.4.1
+#20 7.282    Compiling collection_literals v1.0.3
+#20 7.298    Compiling linear-map v1.2.0
+#20 7.335    Compiling either_of v0.1.9
+#20 7.352    Compiling interpolator v0.5.0
+#20 7.496    Compiling syn v2.0.117
+#20 7.624    Compiling proc-macro-utils v0.10.0
+#20 7.789    Compiling event-listener-strategy v0.5.4
+#20 7.791    Compiling drain_filter_polyfill v0.1.3
+#20 7.806    Compiling dyn-clone v1.0.20
+#20 7.827    Compiling proc-macro-error-attr2 v2.0.0
+#20 7.966    Compiling const_format_proc_macros v0.2.34
+#20 7.993    Compiling async-lock v3.4.2
+#20 8.072    Compiling const_str_slice_concat v0.1.0
+#20 8.229    Compiling indexmap v2.14.0
+#20 8.347    Compiling http v1.4.0
+#20 8.786    Compiling next_tuple v0.1.0
+#20 8.998    Compiling prettyplease v0.2.37
+#20 9.124    Compiling manyhow-macros v0.11.4
+#20 9.196    Compiling same-file v1.0.6
+#20 9.294    Compiling num-traits v0.2.19
+#20 9.469    Compiling walkdir v2.5.0
+#20 9.573    Compiling dashmap v6.1.0
+#20 10.04    Compiling pathdiff v0.2.3
+#20 10.26    Compiling const_format v0.2.36
+#20 10.41    Compiling toml_parser v1.1.2+spec-1.1.0
+#20 11.05    Compiling uuid v1.23.1
+#20 11.08    Compiling base64 v0.22.1
+#20 11.16    Compiling log v0.4.29
+#20 12.19    Compiling regex-automata v0.4.14
+#20 12.90    Compiling serde_spanned v1.1.1
+#20 12.94    Compiling toml_datetime v1.1.1+spec-1.1.0
+#20 13.55    Compiling toml v1.1.2+spec-1.1.0
+#20 14.87    Compiling config v0.15.22
+#20 16.83    Compiling wasm-bindgen-macro-support v0.2.120
+#20 16.83    Compiling synstructure v0.13.2
+#20 16.83    Compiling proc-macro-error2 v2.0.1
+#20 16.83    Compiling server_fn_macro v0.7.8
+#20 16.83    Compiling manyhow v0.11.4
+#20 16.83    Compiling darling_core v0.20.11
+#20 17.28    Compiling regex v1.12.3
+#20 17.79    Compiling serde_derive v1.0.228
+#20 17.79    Compiling futures-macro v0.3.32
+#20 17.80    Compiling zerofrom-derive v0.1.7
+#20 17.80    Compiling thiserror-impl v2.0.18
+#20 17.81    Compiling yoke-derive v0.8.2
+#20 17.82    Compiling zerovec-derive v0.11.3
+#20 17.83    Compiling displaydoc v0.2.5
+#20 17.83    Compiling thiserror-impl v1.0.69
+#20 17.83    Compiling derive-where v1.6.1
+#20 18.23    Compiling syn_derive v0.2.0
+#20 18.25    Compiling reactive_stores_macro v0.1.8
+#20 18.30    Compiling quote-use-macros v0.8.4
+#20 18.44    Compiling pin-project-internal v1.1.11
+#20 18.54    Compiling async-trait v0.1.89
+#20 18.59    Compiling server_fn_macro_default v0.7.8
+#20 18.78    Compiling typed-builder-macro v0.20.1
+#20 18.78    Compiling leptos_router_macro v0.7.8
+#20 19.84    Compiling quote-use v0.8.4
+#20 19.96    Compiling attribute-derive-macro v0.10.5
+#20 20.70    Compiling futures-util v0.3.32
+#20 20.99    Compiling zerofrom v0.1.7
+#20 21.31    Compiling yoke v0.8.2
+#20 21.63    Compiling pin-project v1.1.11
+#20 21.80    Compiling rstml v0.12.1
+#20 21.95    Compiling zerovec v0.11.6
+#20 22.10    Compiling zerotrie v0.2.4
+#20 22.48    Compiling typed-builder v0.20.1
+#20 23.36    Compiling darling_macro v0.20.11
+#20 23.87    Compiling attribute-derive v0.10.5
+#20 24.17    Compiling tinystr v0.8.3
+#20 24.17    Compiling potential_utf v0.1.5
+#20 24.38    Compiling icu_collections v2.2.0
+#20 24.66    Compiling icu_locale_core v2.2.0
+#20 24.73    Compiling darling v0.20.11
+#20 24.88    Compiling validator_derive v0.19.0
+#20 25.08    Compiling wasm-bindgen-macro v0.2.120
+#20 28.08    Compiling icu_provider v2.2.0
+#20 28.66    Compiling icu_properties v2.2.0
+#20 28.66    Compiling icu_normalizer v2.2.0
+#20 29.22    Compiling leptos_hot_reload v0.7.8
+#20 29.28    Compiling oco_ref v0.2.1
+#20 29.28    Compiling serde_qs v0.13.0
+#20 29.28    Compiling codee v0.3.5
+#20 29.28    Compiling leptos_config v0.7.8
+#20 29.86    Compiling futures-executor v0.3.32
+#20 30.16    Compiling js-sys v0.3.97
+#20 30.16    Compiling console_error_panic_hook v0.1.7
+#20 30.30    Compiling futures v0.3.32
+#20 30.36    Compiling hydration_context v0.2.1
+#20 30.80    Compiling leptos_macro v0.7.9
+#20 31.36    Compiling idna_adapter v1.2.2
+#20 31.55    Compiling idna v1.1.0
+#20 31.72    Compiling url v2.5.8
+#20 33.02    Compiling validator v0.19.0
+#20 46.45    Compiling web-sys v0.3.97
+#20 46.45    Compiling wasm-bindgen-futures v0.4.70
+#20 46.45    Compiling chrono v0.4.44
+#20 46.56    Compiling any_spawner v0.2.0
+#20 49.78    Compiling shared v0.1.0 (/app/shared)
+#20 105.5    Compiling gloo-utils v0.2.0
+#20 105.5    Compiling reactive_graph v0.1.8
+#20 105.5    Compiling console_log v1.0.0
+#20 105.8    Compiling gloo-net v0.6.0
+#20 105.8    Compiling gloo-storage v0.3.0
+#20 109.6    Compiling wasm-streams v0.4.2
+#20 112.4    Compiling server_fn v0.7.8
+#20 112.7    Compiling reactive_stores v0.1.8
+#20 113.9    Compiling tachys v0.1.9
+#20 125.8    Compiling leptos_server v0.7.8
+#20 125.8    Compiling leptos_dom v0.7.8
+#20 126.5    Compiling leptos v0.7.8
+#20 127.5    Compiling leptos_router v0.7.8
+#20 130.6    Compiling frontend v0.1.0 (/app/frontend)
+#20 130.9 warning: unused variable: `auth`
+#20 130.9   --> frontend/src/lib.rs:15:9
+#20 130.9    |
+#20 130.9 15 |     let auth = provide_auth_ctx();
+#20 130.9    |         ^^^^ help: if this is intentional, prefix it with an underscore: `_auth`
+#20 130.9    |
+#20 130.9    = note: `#[warn(unused_variables)]` on by default
+#20 130.9 
+#20 132.5 warning: function `refresh` is never used
+#20 132.5   --> frontend/src/api.rs:26:14
+#20 132.5    |
+#20 132.5 26 | pub async fn refresh(refresh_token: &str) -> Result<AuthResponse, String> {
+#20 132.5    |              ^^^^^^^
+#20 132.5    |
+#20 132.5    = note: `#[warn(dead_code)]` on by default
+#20 132.5 
+#20 132.5 warning: function `get_customer` is never used
+#20 132.5   --> frontend/src/api.rs:46:14
+#20 132.5    |
+#20 132.5 46 | pub async fn get_customer(token: &str, id: &str) -> Result<Customer, String> {
+#20 132.5    |              ^^^^^^^^^^^^
+#20 132.5 
+#20 132.5 warning: function `send_invoice` is never used
+#20 132.5   --> frontend/src/api.rs:96:14
+#20 132.5    |
+#20 132.5 96 | pub async fn send_invoice(token: &str, id: &str, body: &SendInvoiceRequest) -> Result<(), String> {
+#20 132.5    |              ^^^^^^^^^^^^
+#20 132.5 
+#20 132.5 warning: function `get_wise_transactions` is never used
+#20 132.5    --> frontend/src/api.rs:142:14
+#20 132.5     |
+#20 132.5 142 | pub async fn get_wise_transactions(token: &str) -> Result<Vec<WiseTransaction>, String> {
+#20 132.5     |              ^^^^^^^^^^^^^^^^^^^^^
+#20 132.5 
+#20 132.5 warning: function `list_text_blocks` is never used
+#20 132.5    --> frontend/src/api.rs:160:14
+#20 132.5     |
+#20 132.5 160 | pub async fn list_text_blocks(token: &str) -> Result<Vec<TextBlock>, String> {
+#20 132.5     |              ^^^^^^^^^^^^^^^^
+#20 132.5 
+#20 132.5 warning: function `create_text_block` is never used
+#20 132.5    --> frontend/src/api.rs:164:14
+#20 132.5     |
+#20 132.5 164 | pub async fn create_text_block(
+#20 132.5     |              ^^^^^^^^^^^^^^^^^
+#20 132.5 
+#20 132.5 warning: function `update_text_block` is never used
+#20 132.5    --> frontend/src/api.rs:171:14
+#20 132.5     |
+#20 132.5 171 | pub async fn update_text_block(
+#20 132.5     |              ^^^^^^^^^^^^^^^^^
+#20 132.5 
+#20 132.5 warning: function `delete_text_block` is never used
+#20 132.5    --> frontend/src/api.rs:179:14
+#20 132.5     |
+#20 132.5 179 | pub async fn delete_text_block(token: &str, id: &str) -> Result<(), String> {
+#20 132.5     |              ^^^^^^^^^^^^^^^^^
+#20 132.5 
+#20 132.5 warning: function `download_backup` is never used
+#20 132.5    --> frontend/src/api.rs:195:14
+#20 132.5     |
+#20 132.5 195 | pub async fn download_backup(token: &str) -> Result<BackupData, String> {
+#20 132.5     |              ^^^^^^^^^^^^^^^
+#20 132.5 
+#20 137.8 warning: `frontend` (lib) generated 10 warnings
+#20 137.8     Finished `release` profile [optimized] target(s) in 2m 20s
+#20 DONE 138.0s
+
+#21 [builder 12/12] RUN trunk build --release
+#21 0.327 2026-04-28T13:28:36.078973Z  INFO Starting trunk 0.21.14
+#21 0.329 2026-04-28T13:28:36.080488Z  INFO starting build
+#21 1.942 warning: unused variable: `auth`
+#21 1.942   --> frontend/src/lib.rs:15:9
+#21 1.942    |
+#21 1.942 15 |     let auth = provide_auth_ctx();
+#21 1.942    |         ^^^^ help: if this is intentional, prefix it with an underscore: `_auth`
+#21 1.942    |
+#21 1.942    = note: `#[warn(unused_variables)]` on by default
+#21 1.942 
+#21 1.942 warning: function `refresh` is never used
+#21 1.942   --> frontend/src/api.rs:26:14
+#21 1.942    |
+#21 1.942 26 | pub async fn refresh(refresh_token: &str) -> Result<AuthResponse, String> {
+#21 1.942    |              ^^^^^^^
+#21 1.942    |
+#21 1.942    = note: `#[warn(dead_code)]` on by default
+#21 1.942 
+#21 1.942 warning: function `get_customer` is never used
+#21 1.942   --> frontend/src/api.rs:46:14
+#21 1.942    |
+#21 1.942 46 | pub async fn get_customer(token: &str, id: &str) -> Result<Customer, String> {
+#21 1.942    |              ^^^^^^^^^^^^
+#21 1.942 
+#21 1.942 warning: function `send_invoice` is never used
+#21 1.942   --> frontend/src/api.rs:96:14
+#21 1.942    |
+#21 1.942 96 | pub async fn send_invoice(token: &str, id: &str, body: &SendInvoiceRequest) -> Result<(), String> {
+#21 1.942    |              ^^^^^^^^^^^^
+#21 1.942 
+#21 1.942 warning: function `get_wise_transactions` is never used
+#21 1.942    --> frontend/src/api.rs:142:14
+#21 1.942     |
+#21 1.942 142 | pub async fn get_wise_transactions(token: &str) -> Result<Vec<WiseTransaction>, String> {
+#21 1.942     |              ^^^^^^^^^^^^^^^^^^^^^
+#21 1.942 
+#21 1.942 warning: function `list_text_blocks` is never used
+#21 1.942    --> frontend/src/api.rs:160:14
+#21 1.942     |
+#21 1.942 160 | pub async fn list_text_blocks(token: &str) -> Result<Vec<TextBlock>, String> {
+#21 1.942     |              ^^^^^^^^^^^^^^^^
+#21 1.942 
+#21 1.942 warning: function `create_text_block` is never used
+#21 1.942    --> frontend/src/api.rs:164:14
+#21 1.942     |
+#21 1.942 164 | pub async fn create_text_block(
+#21 1.942     |              ^^^^^^^^^^^^^^^^^
+#21 1.942 
+#21 1.942 warning: function `update_text_block` is never used
+#21 1.942    --> frontend/src/api.rs:171:14
+#21 1.942     |
+#21 1.942 171 | pub async fn update_text_block(
+#21 1.942     |              ^^^^^^^^^^^^^^^^^
+#21 1.942 
+#21 1.942 warning: function `delete_text_block` is never used
+#21 1.942    --> frontend/src/api.rs:179:14
+#21 1.942     |
+#21 1.942 179 | pub async fn delete_text_block(token: &str, id: &str) -> Result<(), String> {
+#21 1.942     |              ^^^^^^^^^^^^^^^^^
+#21 1.942 
+#21 1.942 warning: function `download_backup` is never used
+#21 1.942    --> frontend/src/api.rs:195:14
+#21 1.942     |
+#21 1.942 195 | pub async fn download_backup(token: &str) -> Result<BackupData, String> {
+#21 1.942     |              ^^^^^^^^^^^^^^^
+#21 1.942 
+#21 1.943 warning: `frontend` (lib) generated 10 warnings
+#21 1.943     Finished `release` profile [optimized] target(s) in 0.13s
+#21 2.138 2026-04-28T13:28:37.890424Z  INFO downloading wasm-bindgen version="0.2.120"
+#21 4.447 2026-04-28T13:28:40.199483Z  INFO installing wasm-bindgen
+#21 5.573 2026-04-28T13:28:41.324769Z  INFO applying new distribution
+#21 5.574 2026-04-28T13:28:41.326262Z  INFO success
+#21 DONE 5.7s
+
+#22 [runtime 2/3] COPY --from=builder /app/frontend/dist /usr/share/nginx/html
+#22 DONE 0.0s
+
+#23 [runtime 3/3] COPY nginx.conf /etc/nginx/conf.d/default.conf
+#23 DONE 0.1s
+
+#24 exporting to image
+#24 exporting layers
+#24 exporting layers 0.4s done
+#24 exporting manifest sha256:570fbaf3cde723b3dc0c194027d2f7c6e35d5d90d32533071b7a0e109838bcbc 0.0s done
+#24 exporting config sha256:51ccc3e27b57d8dc2641e03a989127e63f6188f2bb5769596640bb7113e3d86a 0.0s done
+#24 exporting attestation manifest sha256:d01bbd2757c68a621d969b2606359676194c5e222a7c53fd1f41897b6268520c 0.1s done
+#24 exporting manifest list sha256:7e99822062bc374420767ec4522f5a20915589c3b0e6ff321a2d7ee7b191d29c
+#24 exporting manifest list sha256:7e99822062bc374420767ec4522f5a20915589c3b0e6ff321a2d7ee7b191d29c 0.0s done
+#24 naming to docker.io/library/rust-frontend:latest done
+#24 unpacking to docker.io/library/rust-frontend:latest 0.1s done
+#24 DONE 0.7s
+
+#25 resolving provenance for metadata file
+#25 DONE 0.0s
+ Image rust-frontend Built 

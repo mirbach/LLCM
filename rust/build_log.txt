@@ -1,0 +1,193 @@
+ Image rust-backend Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 498B done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile: 2.38kB done
+#2 DONE 0.0s
+
+#3 [auth] library/debian:pull token for registry-1.docker.io
+#3 DONE 0.0s
+
+#4 [auth] library/rust:pull token for registry-1.docker.io
+#4 DONE 0.0s
+
+#5 [internal] load metadata for docker.io/library/rust:1.88-slim
+#5 DONE 1.0s
+
+#6 [internal] load metadata for docker.io/library/debian:bookworm-slim
+#6 DONE 1.0s
+
+#7 [internal] load .dockerignore
+#7 transferring context: 2B done
+#7 DONE 0.0s
+
+#8 [internal] load build context
+#8 DONE 0.0s
+
+#9 [runtime 1/7] FROM docker.io/library/debian:bookworm-slim@sha256:f9c6a2fd2ddbc23e336b6257a5245e31f996953ef06cd13a59fa0a1df2d5c252
+#9 resolve docker.io/library/debian:bookworm-slim@sha256:f9c6a2fd2ddbc23e336b6257a5245e31f996953ef06cd13a59fa0a1df2d5c252 0.1s done
+#9 DONE 0.1s
+
+#10 [builder  1/14] FROM docker.io/library/rust:1.88-slim@sha256:38bc5a86d998772d4aec2348656ed21438d20fcdce2795b56ca434cf21430d89
+#10 resolve docker.io/library/rust:1.88-slim@sha256:38bc5a86d998772d4aec2348656ed21438d20fcdce2795b56ca434cf21430d89
+#10 resolve docker.io/library/rust:1.88-slim@sha256:38bc5a86d998772d4aec2348656ed21438d20fcdce2795b56ca434cf21430d89 0.1s done
+#10 DONE 0.1s
+
+#11 [runtime 3/7] RUN useradd -m -u 1001 appuser
+#11 CACHED
+
+#12 [runtime 2/7] RUN apt-get update && apt-get install -y     chromium     ca-certificates     libssl3     fonts-liberation     fonts-noto     --no-install-recommends     && rm -rf /var/lib/apt/lists/*
+#12 CACHED
+
+#13 [runtime 4/7] WORKDIR /app
+#13 CACHED
+
+#8 [internal] load build context
+#8 transferring context: 13.31kB done
+#8 DONE 0.0s
+
+#14 [builder  7/14] RUN sed -i 's/, *"frontend"//g; s/"frontend", *//g' Cargo.toml
+#14 CACHED
+
+#15 [builder  5/14] COPY shared/Cargo.toml shared/
+#15 CACHED
+
+#16 [builder  8/14] RUN mkdir -p shared/src backend/src     && echo 'pub fn stub() {}' > shared/src/lib.rs     && echo 'fn main() {}' > backend/src/main.rs
+#16 CACHED
+
+#17 [builder  3/14] WORKDIR /app
+#17 CACHED
+
+#18 [builder  4/14] COPY Cargo.toml ./
+#18 CACHED
+
+#19 [builder  9/14] RUN cargo build --release --package backend 2>&1 | tail -5 || true
+#19 CACHED
+
+#20 [builder  2/14] RUN apt-get update && apt-get install -y     pkg-config     libssl-dev     curl     && rm -rf /var/lib/apt/lists/*
+#20 CACHED
+
+#21 [builder  6/14] COPY backend/Cargo.toml backend/
+#21 CACHED
+
+#22 [builder 10/14] COPY shared/src shared/src
+#22 CACHED
+
+#23 [builder 11/14] COPY backend/src backend/src
+#23 DONE 0.0s
+
+#24 [builder 12/14] COPY migrations migrations
+#24 DONE 0.1s
+
+#25 [builder 13/14] RUN touch shared/src/lib.rs backend/src/main.rs
+#25 DONE 0.3s
+
+#26 [builder 14/14] RUN cargo build --release --package backend
+#26 0.559    Compiling shared v0.1.0 (/app/shared)
+#26 1.804    Compiling backend v0.1.0 (/app/backend)
+#26 1.902 warning: unused import: `sqlx::PgPool`
+#26 1.902  --> backend/src/handlers/auth.rs:4:5
+#26 1.902   |
+#26 1.902 4 | use sqlx::PgPool;
+#26 1.902   |     ^^^^^^^^^^^^
+#26 1.902   |
+#26 1.902   = note: `#[warn(unused_imports)]` on by default
+#26 1.902 
+#26 1.902 warning: unused import: `InvoiceItem`
+#26 1.902   --> backend/src/handlers/invoices.rs:12:29
+#26 1.902    |
+#26 1.902 12 |     CreateInvoice, Invoice, InvoiceItem, InvoiceStatus, PdfFromHtml,
+#26 1.902    |                             ^^^^^^^^^^^
+#26 1.902 
+#26 1.902 warning: unused import: `middleware as axum_middleware`
+#26 1.902  --> backend/src/server.rs:7:5
+#26 1.902   |
+#26 1.902 7 |     middleware as axum_middleware,
+#26 1.902   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+#26 1.902 
+#26 1.902 warning: unused import: `Any`
+#26 1.902   --> backend/src/server.rs:14:12
+#26 1.902    |
+#26 1.902 14 |     cors::{Any, CorsLayer},
+#26 1.902    |            ^^^
+#26 1.902 
+#26 2.463 warning: use of deprecated associated function `tower_http::timeout::TimeoutLayer::new`: Use `TimeoutLayer::with_status_code` instead
+#26 2.463    --> backend/src/server.rs:137:38
+#26 2.463     |
+#26 2.463 137 |                 .layer(TimeoutLayer::new(Duration::from_secs(60)))
+#26 2.463     |                                      ^^^
+#26 2.463     |
+#26 2.463     = note: `#[warn(deprecated)]` on by default
+#26 2.463 
+#26 2.751 warning: fields `port` and `frontend_url` are never read
+#26 2.751   --> backend/src/config.rs:18:9
+#26 2.751    |
+#26 2.751 5  | pub struct Config {
+#26 2.751    |            ------ fields in this struct
+#26 2.751 ...
+#26 2.751 18 |     pub port: u16,
+#26 2.751    |         ^^^^
+#26 2.751 19 |     pub frontend_url: String,
+#26 2.751    |         ^^^^^^^^^^^^
+#26 2.751    |
+#26 2.751    = note: `Config` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+#26 2.751    = note: `#[warn(dead_code)]` on by default
+#26 2.751 
+#26 2.751 warning: variant `Forbidden` is never constructed
+#26 2.751   --> backend/src/error.rs:18:5
+#26 2.751    |
+#26 2.751 10 | pub enum AppError {
+#26 2.751    |          -------- variant in this enum
+#26 2.751 ...
+#26 2.751 18 |     Forbidden,
+#26 2.751    |     ^^^^^^^^^
+#26 2.751    |
+#26 2.751    = note: `AppError` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+#26 2.751 
+#26 2.751 warning: field `limit` is never read
+#26 2.751    --> backend/src/handlers/bank_accounts.rs:249:9
+#26 2.751     |
+#26 2.751 247 | pub struct TransactionQuery {
+#26 2.751     |            ---------------- field in this struct
+#26 2.751 248 |     pub currency: Option<String>,
+#26 2.751 249 |     pub limit: Option<i64>,
+#26 2.751     |         ^^^^^
+#26 2.751     |
+#26 2.751     = note: `TransactionQuery` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+#26 2.751 
+#26 14.38 warning: `backend` (bin "backend") generated 8 warnings (run `cargo fix --bin "backend"` to apply 4 suggestions)
+#26 14.38     Finished `release` profile [optimized] target(s) in 14.23s
+#26 DONE 14.4s
+
+#27 [runtime 5/7] COPY --from=builder /app/target/release/backend ./llcm-backend
+#27 DONE 0.1s
+
+#28 [runtime 6/7] COPY --from=builder /app/migrations ./migrations
+#28 DONE 0.1s
+
+#29 [runtime 7/7] RUN mkdir -p uploads && chown -R appuser:appuser /app
+#29 DONE 0.3s
+
+#30 exporting to image
+#30 exporting layers
+#30 ...
+
+#10 [builder  1/14] FROM docker.io/library/rust:1.88-slim@sha256:38bc5a86d998772d4aec2348656ed21438d20fcdce2795b56ca434cf21430d89
+#10 CACHED
+
+#30 exporting to image
+#30 exporting layers 24.1s done
+#30 exporting manifest sha256:9168b01befa630268cc51b89b5596ce211fe3124504d020179845f21b69079ab 0.0s done
+#30 exporting config sha256:f4863f0512394fbce01cc73e33411ce3022e57fe6731a7deb9cea83fe66fac40 0.0s done
+#30 exporting attestation manifest sha256:737230d0044127a098c7b3ec740c43989544401064bb581fd4510606d47696fc 0.1s done
+#30 exporting manifest list sha256:c15e32b1576d2767eb6253df56b2b75318ddbaf054ad5703d1d3fe37d672014b 0.0s done
+#30 naming to docker.io/library/rust-backend:latest done
+#30 unpacking to docker.io/library/rust-backend:latest
+#30 unpacking to docker.io/library/rust-backend:latest 8.0s done
+#30 DONE 32.4s
+
+#31 resolving provenance for metadata file
+#31 DONE 0.0s
+ Image rust-backend Built 

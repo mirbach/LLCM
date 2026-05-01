@@ -1,0 +1,66 @@
+services:
+  # ── PostgreSQL ───────────────────────────────────────────────────────────────
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: llcm
+      POSTGRES_USER: llcm
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U llcm -d llcm"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── Rust backend (Axum) ──────────────────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://llcm:${POSTGRES_PASSWORD:-changeme}@db:5432/llcm
+      JWT_SECRET: ${JWT_SECRET:-please-change-this-jwt-secret}
+      REFRESH_SECRET: ${REFRESH_SECRET:-please-change-this-refresh-secret}
+      JWT_EXPIRY_SECS: "900"
+      REFRESH_EXPIRY_SECS: "604800"
+      CHROMIUM_PATH: /usr/bin/chromium
+      UPLOAD_DIR: /app/uploads
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      RUST_LOG: llcm_backend=info,tower_http=info
+    volumes:
+      - uploads:/app/uploads
+    expose:
+      - "4000"
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/127.0.0.1/4000' 2>/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Leptos frontend served by nginx ─────────────────────────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${PORT:-80}:80"
+
+volumes:
+  pgdata:
+  uploads:

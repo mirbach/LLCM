@@ -1,0 +1,13 @@
+[build]
+target = "index.html"
+dist = "dist"
+public_url = "/"
+
+[watch]
+# Watch source files for change during `trunk serve`
+ignore = ["dist"]
+
+[serve]
+# Dev server port; nginx proxies to 4000 for /api in production
+port = 3000
+open = false

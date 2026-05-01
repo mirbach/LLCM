@@ -1,0 +1,70 @@
+[package]
+name = "backend"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "backend"
+path = "src/main.rs"
+
+[dependencies]
+shared = { path = "../shared" }
+
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# Web framework
+axum = { version = "0.8", features = ["multipart"] }
+axum-extra = { version = "0.10", features = ["cookie", "typed-header"] }
+tower = { version = "0.5", features = ["util"] }
+tower-http = { version = "0.6", features = ["cors", "trace", "compression-gzip", "fs", "timeout"] }
+
+# Database
+sqlx = { version = "0.8", features = ["postgres", "uuid", "chrono", "runtime-tokio-rustls", "macros"] }
+
+# Serde
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# IDs + time
+uuid = { workspace = true }
+chrono = { workspace = true }
+
+# Auth
+jsonwebtoken = "9"
+argon2 = "0.5"
+rand = "0.8"
+
+# Validation
+validator = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# Tracing
+tracing = { workspace = true }
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Config
+dotenvy = "0.15"
+
+# HTTP client (for Wise API)
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+
+# Email
+lettre = { version = "0.11", features = ["tokio1", "tokio1-rustls-tls", "smtp-transport", "builder"], default-features = false }
+
+# PDF via Chromium CDP
+chromiumoxide = { version = "0.7", features = ["tokio", "tokio-runtime"], default-features = false }
+futures = "0.3"
+
+# API docs
+utoipa = { version = "5", features = ["axum_extras", "chrono", "uuid"] }
+utoipa-swagger-ui = { version = "8", features = ["axum"] }
+
+# Misc
+base64 = "0.22"
+mime = "0.3"
+mime_guess = "2"
+tokio-util = { version = "0.7", features = ["io"] }
